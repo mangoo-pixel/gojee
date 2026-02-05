@@ -1,65 +1,75 @@
-import Image from "next/image";
+import { listTrips } from "@/lib/trips";
+import { PlanTripForm } from "@/components/PlanTripForm";
+import { cookies } from "next/headers"; // Added this
 
-export default function Home() {
+export default async function Home() {
+  // In Next.js 16, we must await cookies() at the top level of the page
+  // even if we don't use them directly, to ensure the request context is ready.
+  await cookies();
+
+  const trips = await listTrips();
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <main className="mx-auto flex max-w-md flex-1 flex-col px-4 pb-28 pt-10">
+      <section aria-label="Welcome" className="space-y-4">
+        <p className="text-sm font-semibold uppercase tracking-wide text-neutral-600">
+          Travel with Haru-chan
+        </p>
+        <h1 className="text-[28px] font-bold leading-snug text-neutral-900">
+          A gentle travel buddy in your pocket.
+        </h1>
+        <p className="text-[18px] text-neutral-700">
+          Paste an Instagram link you love. Haru-chan will help you turn it into
+          a simple, safe trip plan—made for solo women and elders.
+        </p>
+      </section>
+
+      <section aria-label="Plan trip from Instagram" className="mt-8 space-y-4">
+        <PlanTripForm />
+
+        <p className="text-[16px] text-neutral-600">
+          Haru-chan focuses on simple steps: places, timings, and safety
+          reminders—no complicated dashboards.
+        </p>
+      </section>
+
+      <section
+        aria-label="Saved trips"
+        className="mt-10 space-y-3 rounded-3xl bg-white p-4 shadow-sm"
+      >
+        <h2 className="text-[20px] font-semibold text-neutral-900">
+          Saved locations
+        </h2>
+        {trips.length === 0 ? (
+          <p className="text-[18px] text-neutral-600">
+            Your trips will appear here after you save them. Start with one
+            Instagram link.
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+        ) : (
+          <ul className="space-y-3">
+            {trips.map((trip) => (
+              <li
+                key={trip.id}
+                className="rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3"
+              >
+                <p className="text-[18px] font-semibold text-neutral-900">
+                  {trip.title || "Untitled trip"}
+                </p>
+                {trip.instagram_url && (
+                  <p className="mt-1 truncate text-[16px] text-neutral-600">
+                    {trip.instagram_url}
+                  </p>
+                )}
+                {trip.location_summary && (
+                  <p className="mt-1 text-[16px] text-neutral-700">
+                    {trip.location_summary}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </main>
   );
 }

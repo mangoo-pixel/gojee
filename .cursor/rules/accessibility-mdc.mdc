@@ -1,0 +1,14 @@
+---
+alwaysApply: true
+---
+
+---
+description: "Rules for UI/UX to ensure accessibility for ages 20-70"
+globs: "**/*.tsx"
+alwaysApply: true
+---
+# Universal Design Rules
+- **Typography**: Minimum font size is 18px. Use high-contrast colors (e.g., #000000 on #FFFFFF).
+- **Interactions**: All buttons must have a minimum height of 60px for easy tapping.
+- **Simplicity**: Avoid complex dropdowns. Prefer vertical lists and large, clear icons with text labels.
+- **Language**: Use friendly, simple English. Instead of "Authenticate," use "Sign In."

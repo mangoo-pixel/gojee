@@ -1,0 +1,14 @@
+---
+alwaysApply: true
+---
+
+---
+description: "Strict technical rules for Next.js, Supabase, and Portability"
+globs: "**/*.{ts,tsx}"
+alwaysApply: true
+---
+# Technical Standards
+- **Backend**: ALWAYS use Next.js Server Actions for database mutations. 
+- **Portability**: DO NOT use Vercel-specific features (Edge Functions, KV). 
+- **Database**: Use the `@supabase/ssr` package for authentication.
+- **PWA**: Ensure every new page follows the mobile-first responsive layout.
