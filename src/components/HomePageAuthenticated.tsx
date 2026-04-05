@@ -1,24 +1,17 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { usePathname } from "next/navigation";
-import { saveTrip } from "./actions";
-import "./trips/trips2.css";
+import { saveTrip } from "@/app/actions";
+import { logout } from "@/app/actions/auth";
+import "@/app/trips/trips2.css"; // ✅ absolute path
 
-export default function HomePage() {
-  const pathname = usePathname();
+export default function HomePageAuthenticated() {
   const [url, setUrl] = useState("");
   const [name, setName] = useState("");
   const [country, setCountry] = useState("");
   const [message, setMessage] = useState({ text: "", type: "" });
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [showChinaWarning, setShowChinaWarning] = useState(false);
-
-  const handleCountryChange = (value: string) => {
-    setCountry(value);
-    setShowChinaWarning(value.toLowerCase() === "china");
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +32,6 @@ export default function HomePage() {
           setUrl("");
           setName("");
           setCountry("");
-          setShowChinaWarning(false);
           setTimeout(() => setMessage({ text: "", type: "" }), 3000);
         } else {
           throw new Error("Save failed");
@@ -66,8 +58,11 @@ export default function HomePage() {
         <div className="s-topbar-left">
           <div className="s-avatar">
             <span
-              className="material-symbols-outlined"
-              style={{ fontSize: 22, color: "#ff5a26" }}
+              style={{
+                fontFamily: "Material Symbols Outlined",
+                fontSize: 22,
+                color: "#ff5a26",
+              }}
             >
               explore
             </span>
@@ -76,10 +71,17 @@ export default function HomePage() {
         </div>
         <div className="s-topbar-right">
           <button className="s-icon-btn" aria-label="Notifications">
-            <span className="material-symbols-outlined">notifications</span>
+            notifications
           </button>
           <button className="s-icon-btn" aria-label="Settings">
-            <span className="material-symbols-outlined">settings</span>
+            settings
+          </button>
+          <button
+            className="s-icon-btn"
+            onClick={() => logout()}
+            aria-label="Logout"
+          >
+            logout
           </button>
         </div>
       </div>
@@ -95,9 +97,7 @@ export default function HomePage() {
           style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
         >
           <div className="s-search">
-            <span className="s-search-icon material-symbols-outlined">
-              link
-            </span>
+            <span className="s-search-icon">link</span>
             <input
               type="url"
               placeholder="Instagram URL (required)"
@@ -106,10 +106,9 @@ export default function HomePage() {
               required
             />
           </div>
+
           <div className="s-search">
-            <span className="s-search-icon material-symbols-outlined">
-              place
-            </span>
+            <span className="s-search-icon">place</span>
             <input
               type="text"
               placeholder="Spot name (optional)"
@@ -117,47 +116,21 @@ export default function HomePage() {
               onChange={(e) => setName(e.target.value)}
             />
           </div>
+
           <div className="s-search">
-            <span className="s-search-icon material-symbols-outlined">
-              flag
-            </span>
+            <span className="s-search-icon">flag</span>
             <input
               type="text"
               placeholder="Country (optional)"
               value={country}
-              onChange={(e) => handleCountryChange(e.target.value)}
+              onChange={(e) => setCountry(e.target.value)}
             />
           </div>
-
-          {showChinaWarning && (
-            <div
-              style={{
-                backgroundColor: "#fff3e0",
-                borderRadius: "12px",
-                padding: "0.75rem",
-                fontSize: "13px",
-                color: "#b02f00",
-                border: "1px solid #ffb38e",
-              }}
-            >
-              <span
-                className="material-symbols-outlined"
-                style={{
-                  fontSize: "16px",
-                  verticalAlign: "middle",
-                  marginRight: "6px",
-                }}
-              >
-                info
-              </span>
-              ⚠️ Gojee may be partially blocked inside China. We recommend
-              planning your trip before departure.
-            </div>
-          )}
 
           <button type="submit" className="s-maps-btn" disabled={isPending}>
             {isPending ? "Saving..." : "Save spot"}
           </button>
+
           {message.text && (
             <div
               style={{
@@ -169,6 +142,7 @@ export default function HomePage() {
               {message.text}
             </div>
           )}
+
           {lastSaved && (
             <div
               style={{
@@ -185,34 +159,20 @@ export default function HomePage() {
       </div>
 
       <nav className="s-nav">
-        <a
-          href="/"
-          className={`s-nav-item ${pathname === "/" ? "active" : ""}`}
-        >
-          <span className="s-nav-icon">🏠</span>
-          <span>Home</span>
+        <a href="/" className="s-nav-item active">
+          <span className="s-nav-icon">home</span>Home
         </a>
-        <a
-          href="/trips"
-          className={`s-nav-item ${pathname === "/trips" ? "active" : ""}`}
-        >
-          <span className="s-nav-icon">🔖</span>
-          <span>Saved</span>
+        <a href="/trips" className="s-nav-item">
+          <span className="s-nav-icon">bookmark</span>Saved
         </a>
-        <a
-          href="/my-trip"
-          className={`s-nav-item ${pathname === "/my-trip" ? "active" : ""}`}
-        >
-          <span className="s-nav-icon">✈️</span>
-          <span>My Trip</span>
+        <a href="/explore" className="s-nav-item">
+          <span className="s-nav-icon">explore</span>Explore
         </a>
         <a href="/safe-help" className="s-nav-item">
-          <span className="s-nav-icon">🛡️</span>
-          <span>Safety</span>
+          <span className="s-nav-icon">shield_heart</span>Safety
         </a>
         <a href="/profile" className="s-nav-item">
-          <span className="s-nav-icon">👤</span>
-          <span>Profile</span>
+          <span className="s-nav-icon">person</span>Profile
         </a>
       </nav>
     </div>

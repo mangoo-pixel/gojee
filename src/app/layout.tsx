@@ -1,42 +1,28 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import { ServiceWorkerProvider } from "@/components/ServiceWorkerProvider";
-import { BottomNav } from "@/components/layout/BottomNav";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-export const metadata: Metadata = {
-  title: "Travel with Haru-chan",
-  description:
-    "A gentle travel buddy for solo women and elders, helping you plan safe, joyful trips from your Instagram inspiration.",
-};
-
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-neutral-50 text-neutral-900`}
-      >
-        <ServiceWorkerProvider />
-        <div className="flex min-h-screen flex-col">
-          {children}
-        </div>
-        <BottomNav />
+      <head>
+        {/* Fonts */}
+        <link
+          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+          rel="stylesheet"
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+          rel="stylesheet"
+        />
+        <link
+          rel="stylesheet"
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        />
+      </head>
+      <body className="bg-[#faf9f7] text-[#1a1c1b] font-sans antialiased">
+        {children}
       </body>
     </html>
   );
 }
-

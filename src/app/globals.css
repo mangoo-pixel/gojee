@@ -1,21 +1,18 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
-  --background: #f5f5f5;
-  --foreground: #111827;
-}
-
-@theme inline {
+  --background: #fafaf8;
+  --foreground: #111111;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
 }
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
   font-size: 20px;
   line-height: 1.6;
 }
@@ -30,3 +27,41 @@ textarea {
   font: inherit;
 }
 
+/* ✅ Material Symbols fallback – ensures icons show as emojis if font fails */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
+  font-weight: normal;
+  font-style: normal;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  display: inline-block;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: normal;
+  word-wrap: normal;
+  white-space: nowrap;
+  direction: ltr;
+}
+
+.login-container {
+  max-width: 400px;
+  margin: 4rem auto;
+  padding: 2rem;
+  text-align: center;
+}
+.google-btn, form button {
+  width: 100%;
+  padding: 0.75rem;
+  margin: 0.5rem 0;
+  border-radius: 40px;
+  border: 1px solid #ddd;
+  background: white;
+  cursor: pointer;
+}
+.divider {
+  margin: 1rem 0;
+  color: #888;
+}
+.message {
+  margin-top: 1rem;
+  color: #ff5a26;
+}

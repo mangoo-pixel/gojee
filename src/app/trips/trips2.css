@@ -1,0 +1,66 @@
+/* Final Trips CSS - Offline Ready */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { background: #faf9f7; }
+.s-app { max-width: 430px; margin: 0 auto; min-height: 100vh; background: #faf9f7; font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1a1c1b; padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+
+/* Icon fallback */
+.s-mi, .s-icon-btn, .s-nav-icon, .s-search-icon, .s-card-img-placeholder::before, .s-empty-icon::before { font-family: 'Material Symbols Outlined', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif; font-style: normal; font-weight: normal; }
+
+.s-topbar { display: flex; align-items: center; justify-content: space-between; padding: 3rem 1.5rem 1rem; position: sticky; top: 0; background: #faf9f7; z-index: 50; }
+.s-topbar-left { display: flex; align-items: center; gap: 0.75rem; }
+.s-avatar { width: 44px; height: 44px; border-radius: 50%; background: #fff3ee; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.s-brand { font-size: clamp(18px, 4vw, 20px); font-weight: 800; color: #ff5a26; letter-spacing: -0.02em; }
+.s-topbar-right { display: flex; gap: 0.75rem; }
+.s-icon-btn { background: none; border: none; cursor: pointer; color: #3d2c27; font-size: 24px; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.s-icon-btn:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+.s-icon-btn:focus-visible, .s-maps-btn:focus-visible, .s-delete-btn:focus-visible, .s-nav-item:focus-visible { outline: 2px solid #ff5a26; outline-offset: 2px; }
+.s-content { padding: 0 1.5rem; }
+.s-hero { margin-bottom: 1.5rem; }
+.s-hero h1 { font-size: clamp(28px, 5vw, 36px); font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; margin-bottom: 0.5rem; }
+.s-count-badge { display: inline-flex; align-items: center; background: rgba(255,90,38,0.1); color: #b02f00; padding: 4px 12px; border-radius: 100px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+.s-search { position: relative; margin-bottom: 1.75rem; }
+.s-search-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-size: 20px; color: #8f7067; pointer-events: none; }
+.s-search input { width: 100%; padding: 1rem 1rem 1rem 48px; background: #f0eeec; border: none; border-radius: 16px; font-size: 15px; font-family: 'Plus Jakarta Sans', sans-serif; color: #1a1c1b; outline: none; transition: box-shadow 0.2s; }
+.s-search input:focus { box-shadow: 0 0 0 2px #ff5a26; }
+.s-search input::placeholder { color: #8f7067; }
+.s-cards { display: flex; flex-direction: column; gap: 1.25rem; }
+.s-card { background: white; border-radius: 24px; overflow: hidden; box-shadow: 0 6px 28px rgba(61,44,39,0.06); transition: transform 0.2s ease, box-shadow 0.2s ease; }
+@media (hover: hover) { .s-card:hover { transform: translateY(-3px); box-shadow: 0 10px 36px rgba(61,44,39,0.08); } }
+.s-card-img { width: 100%; height: 160px; overflow: hidden; position: relative; }
+.s-card-img img { width: 100%; height: 100%; object-fit: cover; max-width: 100%; }
+.s-card-img-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #fde8df, #f0eeec); font-size: 48px; }
+.s-card-img-placeholder::before { content: "📷"; font-family: 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif; }
+.s-card-body { padding: 1.25rem; }
+.s-card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1rem; gap: 0.5rem; }
+.s-card-name { font-size: 17px; font-weight: 700; margin-bottom: 2px; letter-spacing: -0.01em; }
+.s-card-url { font-size: 12px; color: #8f7067; opacity: 0.9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.s-card-date { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #8f7067; background: #f0eeec; padding: 4px 8px; border-radius: 6px; white-space: nowrap; flex-shrink: 0; }
+.s-card-actions { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.75rem; }
+.s-maps-btn { flex: 1; background: #ff5a26; color: white; border-radius: 100px; padding: 0.75rem 1rem; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: all 0.15s ease; box-shadow: 0 3px 0 #d14013; }
+.s-maps-btn:hover { transform: translateY(-1px); box-shadow: 0 5px 0 #d14013; }
+.s-maps-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #d14013; }
+.s-maps-btn:disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+.s-delete-btn { width: 44px; height: 44px; border-radius: 50%; background: #f5f3f1; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #7a5c54; font-size: 20px; transition: all 0.15s ease; }
+.s-delete-btn:hover { background: #ffe5df; color: #ff5a26; }
+.s-delete-btn:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+.s-empty { text-align: center; padding: 4rem 2rem; }
+.s-empty-icon { font-size: 56px; margin-bottom: 1rem; }
+.s-empty-icon::before { content: "🔍"; font-family: 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif; }
+.s-empty h2 { font-size: 20px; font-weight: 700; margin-bottom: 0.5rem; }
+.s-empty p { font-size: 15px; color: #8f7067; }
+.s-empty-link { display: inline-block; margin-top: 1.25rem; background: #ff5a26; color: white; padding: 0.875rem 1.5rem; border-radius: 100px; font-size: 15px; font-weight: 700; text-decoration: none; }
+.s-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; background: rgba(250,249,247,0.95); backdrop-filter: blur(20px); border-top-left-radius: 28px; border-top-right-radius: 28px; box-shadow: 0 -4px 24px rgba(61,44,39,0.08); display: flex; justify-content: space-around; align-items: center; padding: 0.75rem 0.5rem calc(2rem + env(safe-area-inset-bottom)); z-index: 100; }
+.s-nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; text-decoration: none; color: #5b4039; font-size: 11px; font-weight: 600; border-radius: 100px; padding: 6px 16px; }
+.s-nav-item.active { background: #ffb38e; color: #3d2c27; }
+.s-nav-icon { font-size: 22px; }
+.s-nav-item.active .s-nav-icon { font-variation-settings: 'FILL' 1; }
+.s-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.s-modal { background: white; padding: 24px; border-radius: 16px; width: 90%; max-width: 360px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+.s-modal h3 { margin-bottom: 8px; }
+.s-modal p { color: #666; font-size: 14px; }
+.s-modal-actions { margin-top: 20px; display: flex; gap: 10px; }
+.s-btn-secondary { flex: 1; padding: 10px; border-radius: 10px; border: none; background: #eee; }
+.s-btn-danger { flex: 1; padding: 10px; border-radius: 10px; border: none; background: #ff5a26; color: white; }
