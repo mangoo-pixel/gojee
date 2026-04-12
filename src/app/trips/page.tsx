@@ -252,10 +252,13 @@ export default function SavedSpotsPage() {
     };
   }, [deleteId]);
 
+  // ✅ FIXED: Include country in the map search query
   const getMapsLink = (trip: Trip) => {
-    const query = trip.name
-      ? trip.name.trim()
-      : trip.instagram_url || "restaurant";
+    let query = trip.name ? trip.name.trim() : "";
+    if (trip.country) {
+      query += `, ${trip.country}`;
+    }
+    if (!query) query = trip.instagram_url || "restaurant";
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
   };
 
@@ -360,24 +363,21 @@ export default function SavedSpotsPage() {
               const countryCode = getCountryCode(trip.country);
               return (
                 <div key={trip.id} className="s-card">
-                  <div className="s-card-img">
-                    <div className="s-card-img-placeholder"></div>
-                  </div>
-                  <div className="s-card-body">
+                  <div className="s-card-body" style={{ padding: "1rem" }}>
                     <div className="s-card-top">
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div className="s-card-name">
                           {trip.name ? trip.name.trim() : "Unnamed spot"}
                           {countryCode && (
                             <span
-                              style={{ marginLeft: "0.5rem", fontSize: "16px" }}
+                              style={{ marginLeft: "0.5rem", fontSize: "14px" }}
                             >
                               <ReactCountryFlag
                                 countryCode={countryCode}
                                 svg
                                 style={{
-                                  width: "1.2em",
-                                  height: "1.2em",
+                                  width: "1em",
+                                  height: "1em",
                                   marginRight: "0.3em",
                                   verticalAlign: "middle",
                                 }}
@@ -385,7 +385,7 @@ export default function SavedSpotsPage() {
                               />
                               <span
                                 style={{
-                                  fontSize: "13px",
+                                  fontSize: "12px",
                                   fontWeight: "normal",
                                   color: "#5b4039",
                                 }}
@@ -398,7 +398,7 @@ export default function SavedSpotsPage() {
                             <span
                               style={{
                                 marginLeft: "0.5rem",
-                                fontSize: "13px",
+                                fontSize: "12px",
                                 color: "#8f7067",
                               }}
                             >
@@ -407,6 +407,16 @@ export default function SavedSpotsPage() {
                           )}
                         </div>
                         <div className="s-card-url" title={trip.instagram_url}>
+                          <span
+                            className="material-symbols-outlined"
+                            style={{
+                              fontSize: 14,
+                              verticalAlign: "middle",
+                              marginRight: 4,
+                            }}
+                          >
+                            link
+                          </span>
                           {trip.instagram_url}
                         </div>
                       </div>
@@ -504,11 +514,17 @@ export default function SavedSpotsPage() {
           <span className="s-nav-icon">✈️</span>
           <span>My Trip</span>
         </a>
-        <a href="/safe-help" className="s-nav-item">
+        <a
+          href="/safe-help"
+          className={`s-nav-item ${pathname === "/safe-help" ? "active" : ""}`}
+        >
           <span className="s-nav-icon">🛡️</span>
           <span>Safety</span>
         </a>
-        <a href="/profile" className="s-nav-item">
+        <a
+          href="/profile"
+          className={`s-nav-item ${pathname === "/profile" ? "active" : ""}`}
+        >
           <span className="s-nav-icon">👤</span>
           <span>Profile</span>
         </a>

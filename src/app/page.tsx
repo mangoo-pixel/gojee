@@ -15,6 +15,25 @@ export default function HomePage() {
   const [isPending, startTransition] = useTransition();
   const [showChinaWarning, setShowChinaWarning] = useState(false);
 
+  // Helper: extract a readable name from Instagram URL
+  const extractFromInstagramUrl = (url: string): string | null => {
+    const match = url.match(/instagram\.com\/p\/([A-Za-z0-9_-]+)/);
+    if (match) return `Instagram post: ${match[1]}`;
+    const userMatch = url.match(/instagram\.com\/([A-Za-z0-9_.]+)/);
+    if (userMatch) return `@${userMatch[1]}'s post`;
+    return null;
+  };
+
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newUrl = e.target.value;
+    setUrl(newUrl);
+    // Auto‑fill name only if the user hasn't already typed something and it's an Instagram link
+    if (!name && newUrl.includes("instagram.com")) {
+      const suggestedName = extractFromInstagramUrl(newUrl);
+      if (suggestedName) setName(suggestedName);
+    }
+  };
+
   const handleCountryChange = (value: string) => {
     setCountry(value);
     setShowChinaWarning(value.toLowerCase() === "china");
@@ -102,7 +121,7 @@ export default function HomePage() {
               type="url"
               placeholder="Instagram URL (required)"
               value={url}
-              onChange={(e) => setUrl(e.target.value)}
+              onChange={handleUrlChange}
               required
             />
           </div>
@@ -112,7 +131,7 @@ export default function HomePage() {
             </span>
             <input
               type="text"
-              placeholder="Spot name (optional)"
+              placeholder="Spot name (optional – auto‑filled from URL)"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
