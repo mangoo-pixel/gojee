@@ -16,6 +16,7 @@ type Trip = {
   longitude: number | null;
 };
 
+// Helper: suggest time of day
 function suggestTimeOfDay(spotName: string | null): string {
   const name = (spotName || "").toLowerCase();
   if (
@@ -23,41 +24,40 @@ function suggestTimeOfDay(spotName: string | null): string {
     name.includes("coffee") ||
     name.includes("breakfast")
   )
-    return "🌅 Morning (8:00 – 10:30)";
+    return "🌅 Morning";
   if (
     name.includes("lunch") ||
     name.includes("bistro") ||
     name.includes("restaurant")
   )
-    return "☀️ Midday (12:00 – 14:00)";
+    return "☀️ Midday";
   if (
     name.includes("view") ||
     name.includes("observatory") ||
     name.includes("sunset")
   )
-    return "🌇 Afternoon / Sunset (15:00 – 18:00)";
+    return "🌇 Afternoon";
   if (
     name.includes("bar") ||
     name.includes("izakaya") ||
     name.includes("dinner")
   )
-    return "🌙 Evening (19:00 – 22:00)";
-  return "🕒 Flexible – check opening hours";
+    return "🌙 Evening";
+  return "🕒 Flexible";
 }
 
-function getAITip(spotName: string | null, country: string | null): string {
+// Mock AI tip (short version for itinerary)
+function getShortTip(spotName: string | null, country: string | null): string {
   if (country?.toLowerCase() === "japan") {
     const tips = [
-      "💡 Pro tip: Learn a few Japanese phrases – 'Sumimasen' (excuse me) goes a long way.",
-      "🍵 Local hack: Many temples offer free matcha and meditation sessions in the morning.",
-      "🚆 Travel smart: Get a Suica or Pasmo card for easy train & convenience store payments.",
-      "📸 Solo photo tip: Ask a local shopkeeper to take your picture – they're usually happy to help.",
-      "🧳 Safety note: Keep your passport in your hotel safe; carry a photocopy instead.",
+      "Try the local matcha",
+      "Visit early to avoid crowds",
+      "Ask for the secret menu",
+      "Great for solo photos",
     ];
-    const index = (spotName?.length || 0) % tips.length;
-    return tips[index];
+    return tips[(spotName?.length || 0) % tips.length];
   }
-  return "✨ Explore nearby hidden gems by asking local shop owners.";
+  return "Local favourite";
 }
 
 export default function MyTripPage() {
@@ -66,6 +66,7 @@ export default function MyTripPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
+  const [visited, setVisited] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     setIsClient(true);
@@ -93,6 +94,7 @@ export default function MyTripPage() {
       lng: t.longitude!,
     }));
 
+  // Group spots by country for days
   const groupedByCountry = trips.reduce(
     (acc, trip) => {
       const country = trip.country?.trim() || "Other";
@@ -102,6 +104,38 @@ export default function MyTripPage() {
     },
     {} as Record<string, Trip[]>,
   );
+
+  // Flatten spots for reordering
+  const allSpots = trips;
+
+  // Sort spots by proximity (simple greedy)
+  const reorderByRoute = () => {
+    const withCoords = allSpots.filter((s) => s.latitude && s.longitude);
+    if (withCoords.length < 2) return;
+    const sorted = [...withCoords];
+    // Greedy nearest neighbour (start from first)
+    for (let i = 0; i < sorted.length - 1; i++) {
+      let minDist = Infinity;
+      let minIdx = i + 1;
+      for (let j = i + 1; j < sorted.length; j++) {
+        const dist = Math.hypot(
+          sorted[i].latitude! - sorted[j].latitude!,
+          sorted[i].longitude! - sorted[j].longitude!,
+        );
+        if (dist < minDist) {
+          minDist = dist;
+          minIdx = j;
+        }
+      }
+      [sorted[i + 1], sorted[minIdx]] = [sorted[minIdx], sorted[i + 1]];
+    }
+    // Reorder the main trips array (simplistic: just update state)
+    setTrips(sorted);
+  };
+
+  const toggleVisited = (id: string) => {
+    setVisited((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
 
   return (
     <div className="s-app">
@@ -130,44 +164,44 @@ export default function MyTripPage() {
       <div className="s-content">
         <div className="s-hero">
           <h1>My Trip</h1>
-          <span className="s-count-badge">✈️ AI‑powered itinerary</span>
+          <span className="s-count-badge">✈️ Smart itinerary</span>
         </div>
 
-        {/* Safety banner – icon is now an emoji (always works) */}
+        {/* Safety banner (compact) */}
         <div
           className="s-search"
           style={{
             backgroundColor: "#ffe5df",
             borderRadius: "16px",
-            padding: "1rem",
-            marginBottom: "1.5rem",
+            padding: "0.75rem",
+            marginBottom: "1rem",
+            fontSize: "13px",
           }}
         >
           <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-            <span style={{ fontSize: "24px", color: "#ff5a26" }}>🛡️</span>
+            <span style={{ fontSize: "18px" }}>🛡️</span>
             <span style={{ fontWeight: 600, color: "#b02f00" }}>
               Solo traveller safety
             </span>
           </div>
           <p
-            style={{ fontSize: "14px", marginTop: "0.5rem", color: "#3d2c27" }}
+            style={{ fontSize: "12px", marginTop: "0.25rem", color: "#3d2c27" }}
           >
-            Share your live location with a friend. Keep digital copies of your
-            passport. Avoid empty train cars late at night. Gojee suggests
-            staying in well‑reviewed neighbourhoods like Shinjuku, Shibuya, or
-            Asakusa.
+            Share live location, keep digital passport copy, avoid empty train
+            cars late at night.
           </p>
         </div>
 
+        {/* Map */}
         {isClient && spotsWithCoords.length > 0 && (
           <Suspense
             fallback={
               <div
                 style={{
-                  height: "400px",
+                  height: "300px",
                   background: "#f0eeec",
                   borderRadius: "24px",
-                  marginBottom: "1.5rem",
+                  marginBottom: "1rem",
                 }}
               />
             }
@@ -176,6 +210,22 @@ export default function MyTripPage() {
           </Suspense>
         )}
 
+        {/* Route planner button */}
+        {allSpots.length > 1 && (
+          <button
+            onClick={reorderByRoute}
+            className="s-maps-btn"
+            style={{
+              marginBottom: "1rem",
+              background: "#ffb38e",
+              color: "#3d2c27",
+            }}
+          >
+            🔄 Reorder by route (nearest first)
+          </button>
+        )}
+
+        {/* Itinerary timeline */}
         {loading && (
           <div className="s-empty">
             <p>Planning your trip...</p>
@@ -186,7 +236,7 @@ export default function MyTripPage() {
             <p>{error}</p>
           </div>
         )}
-        {!loading && !error && Object.keys(groupedByCountry).length === 0 && (
+        {!loading && !error && allSpots.length === 0 && (
           <div className="s-empty">
             <span className="s-empty-icon">🗺️</span>
             <h2>No saved spots yet</h2>
@@ -198,135 +248,100 @@ export default function MyTripPage() {
             </a>
           </div>
         )}
-        {!loading && !error && Object.keys(groupedByCountry).length > 0 && (
-          <div className="s-cards" style={{ gap: "2rem" }}>
-            {Object.entries(groupedByCountry).map(([country, spots]) => (
-              <div key={country}>
-                <h2
-                  style={{
-                    fontSize: "1.5rem",
-                    fontWeight: 700,
-                    marginBottom: "1rem",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                  }}
-                >
-                  {country === "Japan" && "🇯🇵"} {country}
-                  {country.toLowerCase() === "china" && (
-                    <span
+        {!loading && !error && allSpots.length > 0 && (
+          <div className="itinerary-timeline">
+            <h3
+              style={{
+                fontSize: "1.2rem",
+                fontWeight: 700,
+                marginBottom: "0.75rem",
+              }}
+            >
+              📅 Your trip plan
+            </h3>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.75rem",
+              }}
+            >
+              {allSpots.map((spot, idx) => {
+                const timeSlot = suggestTimeOfDay(spot.name);
+                return (
+                  <div
+                    key={spot.id}
+                    className="s-card"
+                    style={{ padding: "0.75rem" }}
+                  >
+                    <div
                       style={{
-                        fontSize: "12px",
-                        background: "#fff3e0",
-                        padding: "2px 8px",
-                        borderRadius: "40px",
-                        color: "#b02f00",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.75rem",
                       }}
                     >
-                      ⚠️ Plan before departure
-                    </span>
-                  )}
-                </h2>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "1.25rem",
-                  }}
-                >
-                  {spots.map((spot) => (
-                    <div key={spot.id} className="s-card">
-                      <div className="s-card-img">
-                        <div className="s-card-img-placeholder"></div>
-                      </div>
-                      <div className="s-card-body">
-                        <div className="s-card-top">
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div className="s-card-name">
-                              {spot.name ? spot.name.trim() : "Unnamed spot"}
-                              {spot.country?.toLowerCase() === "china" && (
-                                <span
-                                  style={{
-                                    marginLeft: "0.5rem",
-                                    fontSize: "12px",
-                                    color: "#b02f00",
-                                  }}
-                                  title="Gojee may be partially blocked inside China. Plan your trip before departure."
-                                >
-                                  🛡️
-                                </span>
-                              )}
-                            </div>
-                            <div
-                              className="s-card-url"
-                              title={spot.instagram_url}
+                      <input
+                        type="checkbox"
+                        checked={!!visited[spot.id]}
+                        onChange={() => toggleVisited(spot.id)}
+                        style={{
+                          width: "20px",
+                          height: "20px",
+                          cursor: "pointer",
+                        }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: "1rem" }}>
+                          {spot.name ? spot.name.trim() : "Unnamed spot"}
+                          {spot.country && (
+                            <span
+                              style={{
+                                fontSize: "0.7rem",
+                                color: "#8f7067",
+                                marginLeft: "0.5rem",
+                              }}
                             >
-                              {spot.instagram_url}
-                            </div>
-                          </div>
-                          <span className="s-card-date">
-                            {new Date(spot.created_at || "").toLocaleDateString(
-                              "en-GB",
-                              {
-                                day: "numeric",
-                                month: "short",
-                                timeZone: "UTC",
-                              },
-                            )}
-                          </span>
+                              {spot.country}
+                            </span>
+                          )}
                         </div>
                         <div
                           style={{
-                            margin: "0.5rem 0",
-                            fontSize: "13px",
+                            fontSize: "0.75rem",
                             color: "#8f7067",
                             display: "flex",
                             gap: "0.5rem",
                             alignItems: "center",
+                            marginTop: "0.25rem",
                           }}
                         >
-                          <span>⏰</span> {suggestTimeOfDay(spot.name)}
-                        </div>
-                        <div
-                          style={{
-                            backgroundColor: "#f0eeec",
-                            borderRadius: "12px",
-                            padding: "0.75rem",
-                            margin: "0.75rem 0",
-                            fontSize: "13px",
-                            color: "#3d2c27",
-                          }}
-                        >
-                          <span style={{ fontWeight: 600 }}>💡 AI tip</span>
-                          <br />
-                          {getAITip(spot.name, spot.country)}
-                        </div>
-                        <div className="s-card-actions">
-                          <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(spot.name || spot.instagram_url)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="s-maps-btn"
-                          >
-                            Open Maps
-                          </a>
-                          <a
-                            href={spot.instagram_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="s-maps-btn"
-                          >
-                            Instagram
-                          </a>
+                          <span>⏰ {timeSlot}</span>
+                          <span>•</span>
+                          <span>💡 {getShortTip(spot.name, spot.country)}</span>
                         </div>
                       </div>
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(spot.name || spot.instagram_url)}${spot.country ? `, ${spot.country}` : ""}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="s-maps-btn"
+                        style={{
+                          padding: "0.25rem 0.75rem",
+                          fontSize: "0.7rem",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        Map
+                      </a>
                     </div>
-                  ))}
-                </div>
-              </div>
-            ))}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
+        <div style={{ height: "5rem" }} />
       </div>
 
       <nav className="s-nav">
