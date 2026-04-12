@@ -133,6 +133,7 @@ export default function MyTripPage() {
           <span className="s-count-badge">✈️ AI‑powered itinerary</span>
         </div>
 
+        {/* Safety banner – icon is now an emoji (always works) */}
         <div
           className="s-search"
           style={{
@@ -143,12 +144,7 @@ export default function MyTripPage() {
           }}
         >
           <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-            <span
-              className="material-symbols-outlined"
-              style={{ fontSize: "24px", color: "#ff5a26" }}
-            >
-              shield_heart
-            </span>
+            <span style={{ fontSize: "24px", color: "#ff5a26" }}>🛡️</span>
             <span style={{ fontWeight: 600, color: "#b02f00" }}>
               Solo traveller safety
             </span>
@@ -157,7 +153,9 @@ export default function MyTripPage() {
             style={{ fontSize: "14px", marginTop: "0.5rem", color: "#3d2c27" }}
           >
             Share your live location with a friend. Keep digital copies of your
-            passport. Avoid empty train cars late at night.
+            passport. Avoid empty train cars late at night. Gojee suggests
+            staying in well‑reviewed neighbourhoods like Shinjuku, Shibuya, or
+            Asakusa.
           </p>
         </div>
 
@@ -353,17 +351,11 @@ export default function MyTripPage() {
           <span className="s-nav-icon">✈️</span>
           <span>My Trip</span>
         </a>
-        <a
-          href="/safe-help"
-          className={`s-nav-item ${pathname === "/safe-help" ? "active" : ""}`}
-        >
+        <a href="/safe-help" className="s-nav-item">
           <span className="s-nav-icon">🛡️</span>
           <span>Safety</span>
         </a>
-        <a
-          href="/profile"
-          className={`s-nav-item ${pathname === "/profile" ? "active" : ""}`}
-        >
+        <a href="/profile" className="s-nav-item">
           <span className="s-nav-icon">👤</span>
           <span>Profile</span>
         </a>
