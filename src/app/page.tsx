@@ -27,7 +27,6 @@ export default function HomePage() {
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newUrl = e.target.value;
     setUrl(newUrl);
-    // Auto‑fill name only if the user hasn't already typed something and it's an Instagram link
     if (!name && newUrl.includes("instagram.com")) {
       const suggestedName = extractFromInstagramUrl(newUrl);
       if (suggestedName) setName(suggestedName);
@@ -131,7 +130,7 @@ export default function HomePage() {
             </span>
             <input
               type="text"
-              placeholder="Spot name (optional – auto‑filled from URL)"
+              placeholder="Real spot name – helps the map find it (e.g., 'Tokyo Tower')"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
@@ -142,7 +141,7 @@ export default function HomePage() {
             </span>
             <input
               type="text"
-              placeholder="Country (optional)"
+              placeholder="Country (optional, but improves map accuracy)"
               value={country}
               onChange={(e) => handleCountryChange(e.target.value)}
             />
