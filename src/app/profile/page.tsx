@@ -35,7 +35,6 @@ export default function ProfilePage() {
     }
   };
 
-  // Placeholder actions for buttons without pages
   const showComingSoon = (feature: string) => {
     alert(`${feature} – coming soon!`);
   };
@@ -239,7 +238,6 @@ export default function ProfilePage() {
             </h3>
           </div>
           <div>
-            {/* Personal Info – placeholder */}
             <div
               onClick={() => showComingSoon("Personal Information")}
               style={{
@@ -282,8 +280,6 @@ export default function ProfilePage() {
                 chevron_right
               </span>
             </div>
-
-            {/* Safety Contacts – links to existing page */}
             <a
               href="/safe-help"
               style={{
@@ -328,8 +324,6 @@ export default function ProfilePage() {
                 chevron_right
               </span>
             </a>
-
-            {/* Notifications – toggle works */}
             <div
               style={{
                 display: "flex",
@@ -388,8 +382,6 @@ export default function ProfilePage() {
                 />
               </button>
             </div>
-
-            {/* Help & Support – placeholder */}
             <div
               onClick={() => showComingSoon("Help & Support")}
               style={{
@@ -432,8 +424,6 @@ export default function ProfilePage() {
                 chevron_right
               </span>
             </div>
-
-            {/* Privacy Policy – placeholder */}
             <div
               onClick={() => showComingSoon("Privacy Policy")}
               style={{
@@ -498,12 +488,8 @@ export default function ProfilePage() {
               cursor: "pointer",
               transition: "all 0.2s",
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "#ffdad6";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "#e3e2e0";
-            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "#ffdad6")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "#e3e2e0")}
           >
             <span
               className="material-symbols-outlined"
@@ -520,7 +506,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-            <nav className="s-nav">
+      <nav className="s-nav">
         <a
           href="/home"
           className={`s-nav-item ${pathname === "/home" ? "active" : ""}`}
@@ -557,3 +543,6 @@ export default function ProfilePage() {
           <span>Profile</span>
         </a>
       </nav>
+    </div>
+  );
+}

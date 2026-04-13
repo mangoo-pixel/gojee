@@ -9,7 +9,6 @@ export default function WelcomePage() {
 
   return (
     <div className="s-app">
-      {/* Same top bar as other pages (simplified: only logo) */}
       <div className="s-topbar">
         <div className="s-topbar-left">
           <div className="s-avatar">
@@ -22,9 +21,7 @@ export default function WelcomePage() {
           </div>
           <span className="s-brand">Gojee</span>
         </div>
-        <div className="s-topbar-right">
-          {/* No extra buttons on welcome page – keeps it clean */}
-        </div>
+        <div className="s-topbar-right"></div>
       </div>
 
       <div
@@ -36,7 +33,6 @@ export default function WelcomePage() {
           paddingTop: "1rem",
         }}
       >
-        {/* Hero Illustration */}
         <div
           style={{
             width: "100%",
@@ -70,7 +66,6 @@ export default function WelcomePage() {
           </div>
         </div>
 
-        {/* Tagline */}
         <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
           <h2
             style={{
@@ -88,7 +83,6 @@ export default function WelcomePage() {
           </p>
         </div>
 
-        {/* Feature cards – using same s-card style as the app */}
         <div style={{ width: "100%", marginBottom: "2rem" }}>
           <div
             className="s-card"
@@ -193,7 +187,6 @@ export default function WelcomePage() {
           </div>
         </div>
 
-        {/* Action Buttons */}
         <div
           style={{
             width: "100%",
@@ -204,7 +197,7 @@ export default function WelcomePage() {
           }}
         >
           <button
-            onClick={() => router.push("/")}
+            onClick={() => router.push("/home")}
             className="s-maps-btn"
             style={{
               background: "#ff5a26",
@@ -233,8 +226,7 @@ export default function WelcomePage() {
         </div>
       </div>
 
-      {/* Same bottom navigation as all other pages */}
-            <nav className="s-nav">
+      <nav className="s-nav">
         <a
           href="/home"
           className={`s-nav-item ${pathname === "/home" ? "active" : ""}`}
@@ -265,3 +257,6 @@ export default function WelcomePage() {
           <span>Profile</span>
         </a>
       </nav>
+    </div>
+  );
+}

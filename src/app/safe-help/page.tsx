@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import "@/app/trips/trips2.css";
 
@@ -36,12 +36,10 @@ export default function SafetyPage() {
   const [newContactName, setNewContactName] = useState("");
   const [newContactPhone, setNewContactPhone] = useState("");
 
-  // Load contacts from localStorage
   useEffect(() => {
     const saved = localStorage.getItem("gojee_emergency_contacts");
-    if (saved) {
-      setContacts(JSON.parse(saved));
-    } else {
+    if (saved) setContacts(JSON.parse(saved));
+    else
       setContacts([
         {
           id: "1",
@@ -50,23 +48,19 @@ export default function SafetyPage() {
           icon: "hotel",
         },
       ]);
-    }
   }, []);
 
   useEffect(() => {
-    if (contacts.length > 0) {
+    if (contacts.length)
       localStorage.setItem(
         "gojee_emergency_contacts",
         JSON.stringify(contacts),
       );
-    }
   }, [contacts]);
 
   const addContact = () => {
-    if (!newContactName.trim() || !newContactPhone.trim()) {
-      alert("Please enter both name and phone number.");
-      return;
-    }
+    if (!newContactName.trim() || !newContactPhone.trim())
+      return alert("Enter both name and phone.");
     const newContact: EmergencyContact = {
       id: Date.now().toString(),
       name: newContactName.trim(),
@@ -81,16 +75,11 @@ export default function SafetyPage() {
     setShowContactForm(false);
   };
 
-  const deleteContact = (id: string) => {
+  const deleteContact = (id: string) =>
     setContacts(contacts.filter((c) => c.id !== id));
-  };
 
   const refreshLocation = () => {
-    if (!navigator.geolocation) {
-      alert("Geolocation not supported.");
-      setLocationStatus("error");
-      return;
-    }
+    if (!navigator.geolocation) return alert("Geolocation not supported.");
     setLocationStatus("loading");
     navigator.geolocation.getCurrentPosition(
       async (position) => {
@@ -107,7 +96,6 @@ export default function SafetyPage() {
             "Unknown";
           setLocation({ lat: latitude, lng: longitude, city });
           setLocationStatus("success");
-
           const sunsetRes = await fetch(
             `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=sunset&timezone=auto`,
           );
@@ -127,8 +115,7 @@ export default function SafetyPage() {
           setLocationStatus("success");
         }
       },
-      (error) => {
-        console.error(error);
+      () => {
         alert("Location permission denied.");
         setLocationStatus("error");
       },
@@ -147,64 +134,51 @@ export default function SafetyPage() {
   }, []);
 
   const handleSOS = () => {
-    if (confirm("Emergency SOS will call local police (110). Continue?")) {
+    if (confirm("Emergency SOS will call local police (110). Continue?"))
       window.location.href = "tel:110";
-    }
   };
 
   const shareLocation = () => {
-    if (navigator.share && location) {
+    if (navigator.share && location)
       navigator.share({
         title: "My live location",
         text: `I'm at ${location.city}`,
         url: `https://maps.google.com/?q=${location.lat},${location.lng}`,
       });
-    } else if (location) {
+    else if (location) {
       navigator.clipboard.writeText(
         `${location.city}: ${location.lat}, ${location.lng}`,
       );
       alert("Location copied!");
-    } else {
-      alert("Enable location first.");
-    }
+    } else alert("Enable location first.");
   };
 
   const safeRoutes = () => {
-    if (location) {
+    if (location)
       window.open(
         `https://www.google.com/maps/dir/?api=1&origin=${location.lat},${location.lng}&destination=police+station+near+me`,
         "_blank",
       );
-    } else {
-      alert("Enable location first.");
-    }
+    else alert("Enable location first.");
   };
 
   const walkHomeSafely = () => {
-    if (location) {
+    if (location)
       window.open(
         `https://www.google.com/maps/dir/?api=1&origin=${location.lat},${location.lng}&destination=hotel+near+me`,
         "_blank",
       );
-    } else {
-      alert("Enable location first.");
-    }
+    else alert("Enable location first.");
   };
 
   const checkInWithFriend = () => {
     const message = `Hey, I'm safe at ${location?.city || "my current location"}. Just checking in!`;
-    if (navigator.share) {
-      navigator.share({ title: "Check-in", text: message });
-    } else {
-      alert(message + "\n(Share not supported – copy this message)");
-    }
+    if (navigator.share) navigator.share({ title: "Check-in", text: message });
+    else alert(message + "\n(Share not supported – copy this message)");
   };
 
   const reportIssue = () => {
-    if (!reportMessage.trim()) {
-      alert("Please describe the issue.");
-      return;
-    }
+    if (!reportMessage.trim()) return alert("Please describe the issue.");
     console.log("Report:", reportMessage, "Location:", location);
     setReportStatus("Thanks! Your report helps others.");
     setReportMessage("");
@@ -261,7 +235,6 @@ export default function SafetyPage() {
           </div>
         )}
 
-        {/* Status card */}
         <div
           className="s-card"
           style={{ padding: "1rem", marginBottom: "1.5rem" }}
@@ -337,7 +310,6 @@ export default function SafetyPage() {
           </button>
         </div>
 
-        {/* Emergency SOS */}
         <button
           onClick={handleSOS}
           className="s-maps-btn"
@@ -356,11 +328,10 @@ export default function SafetyPage() {
             style={{ marginRight: "0.5rem" }}
           >
             warning
-          </span>
+          </span>{" "}
           Emergency SOS
         </button>
 
-        {/* Quick actions grid */}
         <div
           style={{
             display: "grid",
@@ -467,7 +438,6 @@ export default function SafetyPage() {
           </button>
         </div>
 
-        {/* Editable Emergency Contacts */}
         <div style={{ marginBottom: "1.5rem" }}>
           <div
             style={{
@@ -608,7 +578,6 @@ export default function SafetyPage() {
           </div>
         </div>
 
-        {/* Local emergency numbers */}
         <div
           className="s-card"
           style={{ padding: "1rem", marginBottom: "1.5rem" }}
@@ -747,7 +716,6 @@ export default function SafetyPage() {
           </div>
         </div>
 
-        {/* Safety checklist */}
         <div
           className="s-card"
           style={{ padding: "1rem", marginBottom: "1.5rem" }}
@@ -803,7 +771,6 @@ export default function SafetyPage() {
           </label>
         </div>
 
-        {/* Report a safety issue */}
         <div style={{ marginBottom: "2rem" }}>
           <h3
             style={{
@@ -843,11 +810,10 @@ export default function SafetyPage() {
             </p>
           )}
         </div>
-
         <div style={{ height: "2rem" }} />
       </div>
 
-            <nav className="s-nav">
+      <nav className="s-nav">
         <a
           href="/home"
           className={`s-nav-item ${pathname === "/home" ? "active" : ""}`}
@@ -884,3 +850,6 @@ export default function SafetyPage() {
           <span>Profile</span>
         </a>
       </nav>
+    </div>
+  );
+}
