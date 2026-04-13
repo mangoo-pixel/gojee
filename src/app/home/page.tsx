@@ -15,7 +15,6 @@ export default function HomePage() {
   const [isPending, startTransition] = useTransition();
   const [showChinaWarning, setShowChinaWarning] = useState(false);
 
-  // Helper: extract a readable name from Instagram URL
   const extractFromInstagramUrl = (url: string): string | null => {
     const match = url.match(/instagram\.com\/p\/([A-Za-z0-9_-]+)/);
     if (match) return `Instagram post: ${match[1]}`;
@@ -44,9 +43,7 @@ export default function HomePage() {
       setMessage({ text: "Instagram URL is required", type: "error" });
       return;
     }
-
     setMessage({ text: "", type: "" });
-
     startTransition(async () => {
       try {
         const result = await saveTrip(url, name || null, country || null);
@@ -101,6 +98,7 @@ export default function HomePage() {
           </button>
         </div>
       </div>
+
       <div className="s-content">
         <div className="s-hero">
           <h1>Save a new spot</h1>
@@ -145,7 +143,6 @@ export default function HomePage() {
               onChange={(e) => handleCountryChange(e.target.value)}
             />
           </div>
-
           {showChinaWarning && (
             <div
               style={{
@@ -171,7 +168,6 @@ export default function HomePage() {
               planning your trip before departure.
             </div>
           )}
-
           <button type="submit" className="s-maps-btn" disabled={isPending}>
             {isPending ? "Saving..." : "Save spot"}
           </button>
@@ -200,9 +196,8 @@ export default function HomePage() {
           )}
         </form>
       </div>
-      // ... (all your existing imports and code remain exactly the same until
-      the nav) ...
-            <nav className="s-nav">
+
+      <nav className="s-nav">
         <a
           href="/home"
           className={`s-nav-item ${pathname === "/home" ? "active" : ""}`}
@@ -233,3 +228,6 @@ export default function HomePage() {
           <span>Profile</span>
         </a>
       </nav>
+    </div>
+  );
+}
