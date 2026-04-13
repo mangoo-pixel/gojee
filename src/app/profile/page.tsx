@@ -520,10 +520,10 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <nav className="s-nav">
+            <nav className="s-nav">
         <a
-          href="/"
-          className={`s-nav-item ${pathname === "/" ? "active" : ""}`}
+          href="/home"
+          className={`s-nav-item ${pathname === "/home" ? "active" : ""}`}
         >
           <span className="s-nav-icon">🏠</span>
           <span>Home</span>
@@ -557,6 +557,3 @@ export default function ProfilePage() {
           <span>Profile</span>
         </a>
       </nav>
-    </div>
-  );
-}

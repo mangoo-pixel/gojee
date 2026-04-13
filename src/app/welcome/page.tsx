@@ -234,10 +234,10 @@ export default function WelcomePage() {
       </div>
 
       {/* Same bottom navigation as all other pages */}
-      <nav className="s-nav">
+            <nav className="s-nav">
         <a
-          href="/"
-          className={`s-nav-item ${pathname === "/" ? "active" : ""}`}
+          href="/home"
+          className={`s-nav-item ${pathname === "/home" ? "active" : ""}`}
         >
           <span className="s-nav-icon">🏠</span>
           <span>Home</span>
@@ -265,6 +265,3 @@ export default function WelcomePage() {
           <span>Profile</span>
         </a>
       </nav>
-    </div>
-  );
-}

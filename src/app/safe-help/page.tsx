@@ -847,10 +847,10 @@ export default function SafetyPage() {
         <div style={{ height: "2rem" }} />
       </div>
 
-      <nav className="s-nav">
+            <nav className="s-nav">
         <a
-          href="/"
-          className={`s-nav-item ${pathname === "/" ? "active" : ""}`}
+          href="/home"
+          className={`s-nav-item ${pathname === "/home" ? "active" : ""}`}
         >
           <span className="s-nav-icon">🏠</span>
           <span>Home</span>
@@ -884,6 +884,3 @@ export default function SafetyPage() {
           <span>Profile</span>
         </a>
       </nav>
-    </div>
-  );
-}
