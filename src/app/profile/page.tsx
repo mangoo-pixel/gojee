@@ -1,4 +1,5 @@
-"use client";
+cat > (src / app / profile / page.tsx) << "EOF";
+("use client");
 
 import { usePathname } from "next/navigation";
 
@@ -70,3 +71,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+EOF;

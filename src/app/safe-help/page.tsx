@@ -1,4 +1,5 @@
-"use client";
+cat > (src / app / safe - help / page.tsx) << "EOF";
+("use client");
 
 import { usePathname } from "next/navigation";
 
@@ -70,3 +71,4 @@ export default function SafetyPage() {
     </div>
   );
 }
+EOF;

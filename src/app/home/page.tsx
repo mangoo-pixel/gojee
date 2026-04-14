@@ -1,4 +1,5 @@
-"use client";
+cat > (src / app / home / page.tsx) << "EOF";
+("use client");
 
 import { usePathname } from "next/navigation";
 
@@ -67,3 +68,4 @@ export default function HomePage() {
     </div>
   );
 }
+EOF;

@@ -1,4 +1,5 @@
-"use client";
+cat > (src / app / welcome / page.tsx) << "EOF";
+("use client");
 
 import { useRouter, usePathname } from "next/navigation";
 
@@ -71,3 +72,4 @@ export default function WelcomePage() {
     </div>
   );
 }
+EOF;
