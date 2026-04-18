@@ -16,7 +16,7 @@ type Trip = {
   longitude?: number | null;
 };
 
-// Comprehensive country name → country code mapping (ISO 3166-1 alpha-2)
+// Country code mapping (keep your existing map)
 const countryCodeMap: Record<string, string> = {
   "united states": "US",
   usa: "US",
@@ -252,7 +252,6 @@ export default function SavedSpotsPage() {
     };
   }, [deleteId]);
 
-  // ✅ FIXED: Include country in the map search query
   const getMapsLink = (trip: Trip) => {
     let query = trip.name ? trip.name.trim() : "";
     if (trip.country) {
@@ -494,8 +493,8 @@ export default function SavedSpotsPage() {
 
       <nav className="s-nav">
         <a
-          href="/"
-          className={`s-nav-item ${pathname === "/" ? "active" : ""}`}
+          href="/home"
+          className={`s-nav-item ${pathname === "/home" ? "active" : ""}`}
         >
           <span className="s-nav-icon">🏠</span>
           <span>Home</span>
@@ -514,17 +513,11 @@ export default function SavedSpotsPage() {
           <span className="s-nav-icon">✈️</span>
           <span>My Trip</span>
         </a>
-        <a
-          href="/safe-help"
-          className={`s-nav-item ${pathname === "/safe-help" ? "active" : ""}`}
-        >
+        <a href="/safe-help" className="s-nav-item">
           <span className="s-nav-icon">🛡️</span>
           <span>Safety</span>
         </a>
-        <a
-          href="/profile"
-          className={`s-nav-item ${pathname === "/profile" ? "active" : ""}`}
-        >
+        <a href="/profile" className="s-nav-item">
           <span className="s-nav-icon">👤</span>
           <span>Profile</span>
         </a>
