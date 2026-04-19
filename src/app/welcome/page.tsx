@@ -33,6 +33,7 @@ export default function WelcomePage() {
           paddingTop: "1rem",
         }}
       >
+        {/* illustration and text as before – unchanged */}
         <div
           style={{
             width: "100%",
@@ -84,6 +85,7 @@ export default function WelcomePage() {
         </div>
 
         <div style={{ width: "100%", marginBottom: "2rem" }}>
+          {/* feature cards – unchanged */}
           <div
             className="s-card"
             style={{
