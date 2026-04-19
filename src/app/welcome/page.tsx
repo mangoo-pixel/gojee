@@ -1,4 +1,3 @@
-// Force redeploy
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
@@ -210,7 +209,7 @@ export default function WelcomePage() {
             Get Started
           </button>
           <button
-            onClick={() => router.push("/profile")}
+            onClick={() => router.push("/login")}
             style={{
               background: "transparent",
               border: "2px solid #e4beb4",
