@@ -33,7 +33,7 @@ export default function WelcomePage() {
           paddingTop: "1rem",
         }}
       >
-        {/* illustration and text */}
+        {/* illustration and text as before – unchanged */}
         <div
           style={{
             width: "100%",
@@ -85,7 +85,7 @@ export default function WelcomePage() {
         </div>
 
         <div style={{ width: "100%", marginBottom: "2rem" }}>
-          {/* feature cards */}
+          {/* feature cards – unchanged */}
           <div
             className="s-card"
             style={{
@@ -198,8 +198,9 @@ export default function WelcomePage() {
             marginBottom: "2rem",
           }}
         >
+          {/* ✅ Get Started now goes to /login (same as Log In) */}
           <button
-            onClick={() => router.push("/home")}
+            onClick={() => router.push("/login")}
             className="s-maps-btn"
             style={{
               background: "#ff5a26",
