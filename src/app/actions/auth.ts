@@ -5,8 +5,8 @@ import { redirect } from "next/navigation";
 
 export async function loginWithGoogle() {
   const supabase = await createServerSupabaseClient();
-  const baseUrl =
-    process.env.NEXT_PUBLIC_BASE_URL || "https://gojee.vercel.app";
+  // Hardcoded production URL – no environment variable needed
+  const baseUrl = "https://gojee.vercel.app";
   const redirectTo = `${baseUrl}/auth/callback`;
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
@@ -19,8 +19,7 @@ export async function loginWithGoogle() {
 export async function loginWithEmail(formData: FormData) {
   const email = formData.get("email") as string;
   const supabase = await createServerSupabaseClient();
-  const baseUrl =
-    process.env.NEXT_PUBLIC_BASE_URL || "https://gojee.vercel.app";
+  const baseUrl = "https://gojee.vercel.app";
   const redirectTo = `${baseUrl}/auth/callback`;
   const { error } = await supabase.auth.signInWithOtp({
     email,

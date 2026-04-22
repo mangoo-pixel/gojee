@@ -14,7 +14,7 @@ async function geocodeLocation(
   const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
   try {
     const res = await fetch(url, {
-      headers: { "User-Agent": "GojeeApp/1.0" }, // Required by Nominatim
+      headers: { "User-Agent": "GojeeApp/1.0" },
     });
     const data = await res.json();
     if (data && data[0]) {
@@ -53,6 +53,14 @@ export async function saveTrip(
     },
   );
 
+  // Get the authenticated user
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+  if (userError || !user)
+    throw new Error("You must be logged in to save spots");
+
   // Geocode using spot name + country
   const coords = await geocodeLocation(name || instagramUrl, country);
   const { error } = await supabase.from("trips").insert({
@@ -61,6 +69,7 @@ export async function saveTrip(
     country: country || null,
     latitude: coords?.lat || null,
     longitude: coords?.lng || null,
+    user_id: user.id,
     created_at: new Date().toISOString(),
   });
 

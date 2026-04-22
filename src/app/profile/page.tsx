@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { logout } from "@/app/actions/auth";
 import "@/app/trips/trips2.css";
 
 export default function ProfilePage() {
@@ -28,10 +29,9 @@ export default function ProfilePage() {
     fetchCount();
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (confirm("Are you sure you want to log out?")) {
-      alert("Logged out (mock). Auth will be added later.");
-      window.location.href = "/";
+      await logout();
     }
   };
 
