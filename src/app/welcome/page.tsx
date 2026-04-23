@@ -14,7 +14,6 @@ export default function WelcomePage() {
     const supabase = createClient();
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        // User is already logged in → redirect to home
         router.push("/home");
       } else {
         setLoading(false);
@@ -61,6 +60,7 @@ export default function WelcomePage() {
           paddingTop: "1rem",
         }}
       >
+        {/* Hero Illustration */}
         <div
           style={{
             width: "100%",
@@ -79,7 +79,7 @@ export default function WelcomePage() {
                 borderRadius: "50%",
                 filter: "blur(40px)",
               }}
-            ></div>
+            />
             <img
               src="https://lh3.googleusercontent.com/aida-public/AB6AXuATnBXJCQ1ms1CQVceO8Ugjccc1fmiRXOq1O9TUlG_zFlMsCPCj7BF7aa_M2rNKGFSKjJpRyJWy_v40BWr1NbppxldPafP05SMeIDT6BURgFuBhtgSXsvEKxRlixFpIdvlqluT4fcIPXiZPnzlSqwUyEw6qaqeLIx6AebsoNrPFbo5sHYH02KxXsmEmlMazc2sZwCUdVLMW7CKH9h5Qu7745U6rQD31j46NaiwezmmSfJ0y8m5Fbo5eEH2s_qp1EKASBGMRpJD4zI_D"
               alt="Compass and map illustration"
@@ -112,7 +112,7 @@ export default function WelcomePage() {
         </div>
 
         <div style={{ width: "100%", marginBottom: "2rem" }}>
-          {/* feature cards – unchanged */}
+          {/* Feature Cards - unchanged */}
           <div
             className="s-card"
             style={{
@@ -216,6 +216,7 @@ export default function WelcomePage() {
           </div>
         </div>
 
+        {/* Two buttons, visually distinct */}
         <div
           style={{
             width: "100%",
@@ -233,6 +234,11 @@ export default function WelcomePage() {
               color: "white",
               padding: "1rem",
               fontSize: "1rem",
+              border: "none",
+              borderRadius: "40px",
+              fontWeight: "bold",
+              cursor: "pointer",
+              boxShadow: "0 4px 12px rgba(255,90,38,0.3)",
             }}
           >
             Get Started
@@ -241,13 +247,13 @@ export default function WelcomePage() {
             onClick={() => router.push("/login")}
             style={{
               background: "transparent",
-              border: "2px solid #e4beb4",
+              border: "2px solid #ff5a26",
               borderRadius: "40px",
               padding: "1rem",
               fontSize: "1rem",
               fontWeight: 600,
               cursor: "pointer",
-              color: "#1a1c1b",
+              color: "#ff5a26",
             }}
           >
             Log In
