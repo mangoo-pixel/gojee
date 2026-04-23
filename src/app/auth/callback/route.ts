@@ -10,7 +10,7 @@ export async function GET(request: Request) {
     await supabase.auth.exchangeCodeForSession(code);
   }
 
-  // Hardcoded production URL – ensures redirect goes to the live site
+  // Hardcoded production URL – redirect to home
   const baseUrl = "https://gojee.vercel.app";
   return NextResponse.redirect(`${baseUrl}/home`);
 }

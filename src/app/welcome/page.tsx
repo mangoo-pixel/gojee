@@ -1,11 +1,39 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import "@/app/trips/trips2.css";
 
 export default function WelcomePage() {
   const router = useRouter();
   const pathname = usePathname();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        // User is already logged in → redirect to home
+        router.push("/home");
+      } else {
+        setLoading(false);
+      }
+    });
+  }, [router]);
+
+  if (loading) {
+    return (
+      <div className="s-app">
+        <div
+          className="s-content"
+          style={{ textAlign: "center", paddingTop: "4rem" }}
+        >
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="s-app">
@@ -33,7 +61,6 @@ export default function WelcomePage() {
           paddingTop: "1rem",
         }}
       >
-        {/* illustration and text as before – unchanged */}
         <div
           style={{
             width: "100%",
@@ -198,7 +225,6 @@ export default function WelcomePage() {
             marginBottom: "2rem",
           }}
         >
-          {/* ✅ Get Started now goes to /login (same as Log In) */}
           <button
             onClick={() => router.push("/login")}
             className="s-maps-btn"
