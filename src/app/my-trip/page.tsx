@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState, lazy, Suspense } from "react";
+import { useEffect, useState, lazy, Suspense, useRef } from "react";
 import { usePathname } from "next/navigation";
-import ReactMarkdown from "react-markdown";
 import { generateItinerary } from "@/app/actions/generate-itinerary";
 import "@/app/trips/trips2.css";
 
@@ -18,6 +17,68 @@ type Trip = {
   longitude: number | null;
 };
 
+// Helper to parse markdown into days (simple split by "Day X")
+function parseDays(markdown: string): { title: string; content: string }[] {
+  const lines = markdown.split("\n");
+  const days: { title: string; content: string }[] = [];
+  let currentDay: { title: string; content: string } | null = null;
+  for (const line of lines) {
+    if (line.match(/^##\s+Day\s+\d+/i)) {
+      if (currentDay) days.push(currentDay);
+      currentDay = { title: line.replace(/^##\s+/, ""), content: "" };
+    } else if (currentDay) {
+      currentDay.content += line + "\n";
+    }
+  }
+  if (currentDay) days.push(currentDay);
+  return days;
+}
+
+// Format content lines: add icons for morning/afternoon/evening/safety
+function formatContent(content: string) {
+  const lines = content.split("\n");
+  const formatted = lines
+    .map((line, idx) => {
+      const lower = line.toLowerCase();
+      if (lower.includes("morning:"))
+        return (
+          <div key={idx} className="activity-item">
+            <span className="activity-icon">☀️</span>
+            <span className="activity-text">{line}</span>
+          </div>
+        );
+      if (lower.includes("afternoon:"))
+        return (
+          <div key={idx} className="activity-item">
+            <span className="activity-icon">🌤️</span>
+            <span className="activity-text">{line}</span>
+          </div>
+        );
+      if (lower.includes("evening:"))
+        return (
+          <div key={idx} className="activity-item">
+            <span className="activity-icon">🌙</span>
+            <span className="activity-text">{line}</span>
+          </div>
+        );
+      if (lower.includes("safety tip:"))
+        return (
+          <div key={idx} className="safety-item">
+            <span className="activity-icon">⚠️</span>
+            <span className="activity-text">{line}</span>
+          </div>
+        );
+      if (line.trim() === "") return null;
+      return (
+        <p key={idx} className="regular-text">
+          {line}
+        </p>
+      );
+    })
+    .filter(Boolean);
+  return <div className="activity-container">{formatted}</div>;
+}
+
 export default function MyTripPage() {
   const pathname = usePathname();
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -26,6 +87,8 @@ export default function MyTripPage() {
   const [isClient, setIsClient] = useState(false);
   const [itinerary, setItinerary] = useState<string>("");
   const [generating, setGenerating] = useState(false);
+  const [days, setDays] = useState<{ title: string; content: string }[]>([]);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setIsClient(true);
@@ -58,7 +121,15 @@ export default function MyTripPage() {
     setItinerary("");
     const result = await generateItinerary(trips);
     setItinerary(result);
+    setDays(parseDays(result));
     setGenerating(false);
+  };
+
+  const copyItinerary = () => {
+    if (itinerary) {
+      navigator.clipboard.writeText(itinerary);
+      alert("Itinerary copied to clipboard!");
+    }
   };
 
   return (
@@ -91,7 +162,7 @@ export default function MyTripPage() {
           <span className="s-count-badge">✈️ AI‑powered itinerary</span>
         </div>
 
-        {/* Safety banner */}
+        {/* Safety mini-banner */}
         <div
           className="s-search"
           style={{
@@ -116,15 +187,8 @@ export default function MyTripPage() {
           </p>
         </div>
 
-        {/* Two‑column layout for map + stats (optional) */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "1rem",
-            marginBottom: "1.5rem",
-          }}
-        >
+        {/* Map + stats + generate button */}
+        <div style={{ marginBottom: "1.5rem" }}>
           {isClient && spotsWithCoords.length > 0 && (
             <Suspense
               fallback={
@@ -133,6 +197,7 @@ export default function MyTripPage() {
                     height: "300px",
                     background: "#f0eeec",
                     borderRadius: "24px",
+                    marginBottom: "1rem",
                   }}
                 />
               }
@@ -140,7 +205,6 @@ export default function MyTripPage() {
               <SpotMap spots={spotsWithCoords} />
             </Suspense>
           )}
-          {/* Quick stats card */}
           <div
             className="s-card"
             style={{
@@ -148,6 +212,8 @@ export default function MyTripPage() {
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
+              flexWrap: "wrap",
+              gap: "1rem",
             }}
           >
             <div>
@@ -174,160 +240,121 @@ export default function MyTripPage() {
                 {new Set(trips.map((t) => t.country).filter(Boolean)).size}
               </div>
             </div>
-            <button
-              onClick={handleGenerate}
-              disabled={generating || trips.length === 0}
-              className="s-maps-btn"
-              style={{
-                background: "#ff5a26",
-                color: "white",
-                padding: "0.5rem 1rem",
-                fontSize: "0.9rem",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-              }}
-            >
-              {generating ? (
-                <>
-                  <span
-                    className="material-symbols-outlined"
-                    style={{
-                      fontSize: "1.2rem",
-                      animation: "spin 1s linear infinite",
-                    }}
-                  >
-                    progress_activity
-                  </span>
-                  Planning...
-                </>
-              ) : (
-                <>
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+              <button
+                onClick={handleGenerate}
+                disabled={generating || trips.length === 0}
+                className="s-maps-btn"
+                style={{
+                  background: "#ff5a26",
+                  color: "white",
+                  padding: "0.5rem 1rem",
+                  fontSize: "0.9rem",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                }}
+              >
+                {generating ? (
+                  <>
+                    <span
+                      className="material-symbols-outlined"
+                      style={{
+                        fontSize: "1.2rem",
+                        animation: "spin 1s linear infinite",
+                      }}
+                    >
+                      progress_activity
+                    </span>
+                    Planning...
+                  </>
+                ) : (
+                  <>
+                    <span
+                      className="material-symbols-outlined"
+                      style={{ fontSize: "1.2rem" }}
+                    >
+                      auto_awesome
+                    </span>
+                    Generate AI Itinerary
+                  </>
+                )}
+              </button>
+              {itinerary && (
+                <button
+                  onClick={copyItinerary}
+                  className="s-maps-btn"
+                  style={{
+                    background: "#e3e2e0",
+                    color: "#ff5a26",
+                    padding: "0.5rem 1rem",
+                    fontSize: "0.9rem",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                  }}
+                >
                   <span
                     className="material-symbols-outlined"
                     style={{ fontSize: "1.2rem" }}
                   >
-                    auto_awesome
+                    content_copy
                   </span>
-                  Generate AI Itinerary
-                </>
+                  Copy
+                </button>
               )}
-            </button>
+            </div>
           </div>
         </div>
 
-        {/* AI Itinerary Result */}
-        {itinerary && (
-          <div
-            className="s-card"
-            style={{
-              padding: "1.5rem",
-              marginBottom: "1.5rem",
-              background: "linear-gradient(145deg, #fff, #faf9f7)",
-            }}
-          >
-            <h3
-              style={{
-                fontSize: "1.3rem",
-                fontWeight: 700,
-                marginBottom: "0.75rem",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-              }}
-            >
-              <span
-                className="material-symbols-outlined"
-                style={{ color: "#ff5a26" }}
+        {/* Itinerary Result – Rich Cards */}
+        {itinerary && days.length > 0 && (
+          <div ref={contentRef} className="itinerary-container">
+            {days.map((day, idx) => (
+              <div
+                key={idx}
+                className="itinerary-day-card"
+                style={{ marginBottom: "1.5rem" }}
               >
-                auto_awesome
-              </span>
-              Your personal travel plan
-            </h3>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.75rem",
+                    marginBottom: "0.75rem",
+                    borderLeft: "4px solid #ff5a26",
+                    paddingLeft: "0.75rem",
+                  }}
+                >
+                  <span style={{ fontSize: "1.8rem" }}>📅</span>
+                  <h3
+                    style={{ fontSize: "1.3rem", fontWeight: 700, margin: 0 }}
+                  >
+                    {day.title}
+                  </h3>
+                </div>
+                <div
+                  className="s-card"
+                  style={{
+                    padding: "1rem",
+                    background: "linear-gradient(145deg, #ffffff, #faf9f7)",
+                    borderRadius: "20px",
+                  }}
+                >
+                  {formatContent(day.content)}
+                </div>
+              </div>
+            ))}
+            {/* Small print */}
             <div
               style={{
-                fontSize: "0.95rem",
-                lineHeight: 1.6,
-                color: "#1a1c1b",
-                "& h2": {
-                  fontSize: "1.2rem",
-                  fontWeight: 700,
-                  marginTop: "1rem",
-                  marginBottom: "0.5rem",
-                  color: "#ff5a26",
-                },
-                "& h3": {
-                  fontSize: "1rem",
-                  fontWeight: 600,
-                  marginTop: "0.75rem",
-                  color: "#3d2c27",
-                },
-                "& ul": { paddingLeft: "1.5rem", margin: "0.5rem 0" },
-                "& li": { margin: "0.25rem 0" },
-                "& p": { margin: "0.5rem 0" },
+                fontSize: "0.7rem",
+                textAlign: "center",
+                color: "#8f7067",
+                marginTop: "1rem",
               }}
             >
-              <ReactMarkdown
-                components={{
-                  h2: ({ children }) => (
-                    <h2
-                      style={{
-                        fontSize: "1.25rem",
-                        fontWeight: 700,
-                        marginTop: "1rem",
-                        marginBottom: "0.5rem",
-                        color: "#ff5a26",
-                        borderLeft: "4px solid #ff5a26",
-                        paddingLeft: "0.75rem",
-                      }}
-                    >
-                      {children}
-                    </h2>
-                  ),
-                  h3: ({ children }) => (
-                    <h3
-                      style={{
-                        fontSize: "1rem",
-                        fontWeight: 600,
-                        marginTop: "0.75rem",
-                        color: "#3d2c27",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.5rem",
-                      }}
-                    >
-                      <span
-                        className="material-symbols-outlined"
-                        style={{ fontSize: "1.2rem" }}
-                      >
-                        lightbulb
-                      </span>
-                      {children}
-                    </h3>
-                  ),
-                  ul: ({ children }) => (
-                    <ul
-                      style={{
-                        paddingLeft: "1.5rem",
-                        margin: "0.5rem 0",
-                        listStyleType: "disc",
-                      }}
-                    >
-                      {children}
-                    </ul>
-                  ),
-                  li: ({ children }) => (
-                    <li style={{ margin: "0.25rem 0", lineHeight: 1.5 }}>
-                      {children}
-                    </li>
-                  ),
-                  p: ({ children }) => (
-                    <p style={{ margin: "0.5rem 0" }}>{children}</p>
-                  ),
-                }}
-              >
-                {itinerary}
-              </ReactMarkdown>
+              ✨ Powered by Groq AI | Gojee
             </div>
           </div>
         )}
@@ -375,11 +402,38 @@ export default function MyTripPage() {
         <div style={{ height: "5rem" }} />
       </div>
 
-      {/* Add simple spin animation */}
       <style>{`
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+        .activity-item, .safety-item {
+          display: flex;
+          align-items: flex-start;
+          gap: 0.75rem;
+          margin-bottom: 0.75rem;
+        }
+        .activity-icon {
+          font-size: 1.25rem;
+          min-width: 1.75rem;
+        }
+        .activity-text {
+          flex: 1;
+          line-height: 1.4;
+        }
+        .safety-item {
+          background: #fff3e0;
+          padding: 0.5rem;
+          border-radius: 12px;
+          margin-top: 0.5rem;
+        }
+        .regular-text {
+          margin: 0.5rem 0;
+          line-height: 1.5;
+        }
+        .itinerary-container {
+          display: flex;
+          flex-direction: column;
         }
       `}</style>
 
