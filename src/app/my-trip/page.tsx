@@ -17,28 +17,38 @@ type Trip = {
   longitude: number | null;
 };
 
-// Convert plain text with URLs into JSX with clickable links, and remove all asterisks
-function linkifyText(text: string) {
-  // Remove all asterisks (markdown leftovers)
+// Convert plain text with URLs into JSX with clickable links, remove asterisks, and add spacing
+function formatItinerary(text: string) {
+  // Remove all asterisks
   let cleanText = text.replace(/\*/g, "");
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
-  const parts = cleanText.split(urlRegex);
-  return parts.map((part, i) => {
-    if (part.match(urlRegex)) {
-      return (
-        <a
-          key={i}
-          href={part}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ color: "#ff5a26", textDecoration: "underline" }}
-        >
-          {part}
-        </a>
-      );
-    }
-    return <span key={i}>{part}</span>;
+
+  // Replace Instagram URLs with a neat label
+  const instagramRegex = /(https?:\/\/[^\s]*instagram\.com\/[^\s]+)/gi;
+  cleanText = cleanText.replace(instagramRegex, (match) => {
+    return `<a href="${match}" target="_blank" rel="noopener noreferrer" class="itinerary-link">📷 Instagram post</a>`;
   });
+
+  // Replace any other URLs (like Google Maps) with a map label
+  const urlRegex = /(https?:\/\/[^\s]+)(?![^<]*>)/gi;
+  cleanText = cleanText.replace(urlRegex, (match) => {
+    if (match.includes("instagram.com")) return match; // already replaced
+    return `<a href="${match}" target="_blank" rel="noopener noreferrer" class="itinerary-link">🗺️ Map link</a>`;
+  });
+
+  // Split by double newlines to create paragraphs
+  const paragraphs = cleanText.split(/\n\s*\n/);
+
+  return (
+    <div className="itinerary-text">
+      {paragraphs.map((para, idx) => (
+        <p
+          key={idx}
+          className="itinerary-paragraph"
+          dangerouslySetInnerHTML={{ __html: para.replace(/\n/g, "<br />") }}
+        />
+      ))}
+    </div>
+  );
 }
 
 export default function MyTripPage() {
@@ -86,7 +96,11 @@ export default function MyTripPage() {
 
   const copyItinerary = () => {
     if (itinerary) {
-      navigator.clipboard.writeText(itinerary);
+      // Remove any HTML tags for plain text copy
+      const plainText = itinerary
+        .replace(/\*/g, "")
+        .replace(/(https?:\/\/[^\s]+)/g, (url) => url);
+      navigator.clipboard.writeText(plainText);
       alert("Itinerary copied to clipboard!");
     }
   };
@@ -266,7 +280,7 @@ export default function MyTripPage() {
           </div>
         </div>
 
-        {/* Itinerary – plain text with all asterisks removed and links clickable */}
+        {/* Itinerary – clean, spaced, with short links */}
         {itinerary && (
           <div
             className="s-card"
@@ -276,16 +290,7 @@ export default function MyTripPage() {
               background: "linear-gradient(145deg, #fff, #faf9f7)",
             }}
           >
-            <pre
-              style={{
-                whiteSpace: "pre-wrap",
-                fontFamily: "inherit",
-                margin: 0,
-                lineHeight: 1.6,
-              }}
-            >
-              {linkifyText(itinerary)}
-            </pre>
+            {formatItinerary(itinerary)}
             <div
               style={{
                 fontSize: "0.7rem",
@@ -342,10 +347,32 @@ export default function MyTripPage() {
         <div style={{ height: "5rem" }} />
       </div>
 
-      <style>{`
+      <style jsx>{`
         @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+        .itinerary-text {
+          font-family: inherit;
+          line-height: 1.6;
+          color: #1a1c1b;
+        }
+        .itinerary-paragraph {
+          margin-bottom: 1.25rem;
+          white-space: pre-wrap;
+        }
+        .itinerary-link {
+          color: #ff5a26;
+          text-decoration: underline;
+          margin: 0 0.2rem;
+          white-space: nowrap;
+        }
+        .itinerary-link:hover {
+          opacity: 0.8;
         }
       `}</style>
 
