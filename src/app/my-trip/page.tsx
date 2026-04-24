@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, lazy, Suspense, useRef } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { usePathname } from "next/navigation";
 import { generateItinerary } from "@/app/actions/generate-itinerary";
 import "@/app/trips/trips2.css";
@@ -17,66 +17,28 @@ type Trip = {
   longitude: number | null;
 };
 
-// Helper to parse markdown into days (simple split by "Day X")
-function parseDays(markdown: string): { title: string; content: string }[] {
-  const lines = markdown.split("\n");
-  const days: { title: string; content: string }[] = [];
-  let currentDay: { title: string; content: string } | null = null;
-  for (const line of lines) {
-    if (line.match(/^##\s+Day\s+\d+/i)) {
-      if (currentDay) days.push(currentDay);
-      currentDay = { title: line.replace(/^##\s+/, ""), content: "" };
-    } else if (currentDay) {
-      currentDay.content += line + "\n";
-    }
-  }
-  if (currentDay) days.push(currentDay);
-  return days;
-}
-
-// Format content lines: add icons for morning/afternoon/evening/safety
-function formatContent(content: string) {
-  const lines = content.split("\n");
-  const formatted = lines
-    .map((line, idx) => {
-      const lower = line.toLowerCase();
-      if (lower.includes("morning:"))
-        return (
-          <div key={idx} className="activity-item">
-            <span className="activity-icon">☀️</span>
-            <span className="activity-text">{line}</span>
-          </div>
-        );
-      if (lower.includes("afternoon:"))
-        return (
-          <div key={idx} className="activity-item">
-            <span className="activity-icon">🌤️</span>
-            <span className="activity-text">{line}</span>
-          </div>
-        );
-      if (lower.includes("evening:"))
-        return (
-          <div key={idx} className="activity-item">
-            <span className="activity-icon">🌙</span>
-            <span className="activity-text">{line}</span>
-          </div>
-        );
-      if (lower.includes("safety tip:"))
-        return (
-          <div key={idx} className="safety-item">
-            <span className="activity-icon">⚠️</span>
-            <span className="activity-text">{line}</span>
-          </div>
-        );
-      if (line.trim() === "") return null;
+// Convert plain text with URLs into JSX with clickable links, and remove all asterisks
+function linkifyText(text: string) {
+  // Remove all asterisks (markdown leftovers)
+  let cleanText = text.replace(/\*/g, "");
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = cleanText.split(urlRegex);
+  return parts.map((part, i) => {
+    if (part.match(urlRegex)) {
       return (
-        <p key={idx} className="regular-text">
-          {line}
-        </p>
+        <a
+          key={i}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: "#ff5a26", textDecoration: "underline" }}
+        >
+          {part}
+        </a>
       );
-    })
-    .filter(Boolean);
-  return <div className="activity-container">{formatted}</div>;
+    }
+    return <span key={i}>{part}</span>;
+  });
 }
 
 export default function MyTripPage() {
@@ -87,8 +49,6 @@ export default function MyTripPage() {
   const [isClient, setIsClient] = useState(false);
   const [itinerary, setItinerary] = useState<string>("");
   const [generating, setGenerating] = useState(false);
-  const [days, setDays] = useState<{ title: string; content: string }[]>([]);
-  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setIsClient(true);
@@ -121,7 +81,6 @@ export default function MyTripPage() {
     setItinerary("");
     const result = await generateItinerary(trips);
     setItinerary(result);
-    setDays(parseDays(result));
     setGenerating(false);
   };
 
@@ -162,7 +121,7 @@ export default function MyTripPage() {
           <span className="s-count-badge">✈️ AI‑powered itinerary</span>
         </div>
 
-        {/* Safety mini-banner */}
+        {/* Safety banner */}
         <div
           className="s-search"
           style={{
@@ -307,45 +266,26 @@ export default function MyTripPage() {
           </div>
         </div>
 
-        {/* Itinerary Result – Rich Cards */}
-        {itinerary && days.length > 0 && (
-          <div ref={contentRef} className="itinerary-container">
-            {days.map((day, idx) => (
-              <div
-                key={idx}
-                className="itinerary-day-card"
-                style={{ marginBottom: "1.5rem" }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.75rem",
-                    marginBottom: "0.75rem",
-                    borderLeft: "4px solid #ff5a26",
-                    paddingLeft: "0.75rem",
-                  }}
-                >
-                  <span style={{ fontSize: "1.8rem" }}>📅</span>
-                  <h3
-                    style={{ fontSize: "1.3rem", fontWeight: 700, margin: 0 }}
-                  >
-                    {day.title}
-                  </h3>
-                </div>
-                <div
-                  className="s-card"
-                  style={{
-                    padding: "1rem",
-                    background: "linear-gradient(145deg, #ffffff, #faf9f7)",
-                    borderRadius: "20px",
-                  }}
-                >
-                  {formatContent(day.content)}
-                </div>
-              </div>
-            ))}
-            {/* Small print */}
+        {/* Itinerary – plain text with all asterisks removed and links clickable */}
+        {itinerary && (
+          <div
+            className="s-card"
+            style={{
+              padding: "1.5rem",
+              marginBottom: "1.5rem",
+              background: "linear-gradient(145deg, #fff, #faf9f7)",
+            }}
+          >
+            <pre
+              style={{
+                whiteSpace: "pre-wrap",
+                fontFamily: "inherit",
+                margin: 0,
+                lineHeight: 1.6,
+              }}
+            >
+              {linkifyText(itinerary)}
+            </pre>
             <div
               style={{
                 fontSize: "0.7rem",
@@ -406,34 +346,6 @@ export default function MyTripPage() {
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
-        }
-        .activity-item, .safety-item {
-          display: flex;
-          align-items: flex-start;
-          gap: 0.75rem;
-          margin-bottom: 0.75rem;
-        }
-        .activity-icon {
-          font-size: 1.25rem;
-          min-width: 1.75rem;
-        }
-        .activity-text {
-          flex: 1;
-          line-height: 1.4;
-        }
-        .safety-item {
-          background: #fff3e0;
-          padding: 0.5rem;
-          border-radius: 12px;
-          margin-top: 0.5rem;
-        }
-        .regular-text {
-          margin: 0.5rem 0;
-          line-height: 1.5;
-        }
-        .itinerary-container {
-          display: flex;
-          flex-direction: column;
         }
       `}</style>
 
