@@ -2,6 +2,8 @@
 
 import { useEffect, useState, lazy, Suspense } from "react";
 import { usePathname } from "next/navigation";
+import ReactMarkdown from "react-markdown";
+import { generateItinerary } from "@/app/actions/generate-itinerary";
 import "@/app/trips/trips2.css";
 
 const SpotMap = lazy(() => import("@/components/SpotMap"));
@@ -16,57 +18,14 @@ type Trip = {
   longitude: number | null;
 };
 
-// Helper: suggest time of day
-function suggestTimeOfDay(spotName: string | null): string {
-  const name = (spotName || "").toLowerCase();
-  if (
-    name.includes("cafe") ||
-    name.includes("coffee") ||
-    name.includes("breakfast")
-  )
-    return "🌅 Morning";
-  if (
-    name.includes("lunch") ||
-    name.includes("bistro") ||
-    name.includes("restaurant")
-  )
-    return "☀️ Midday";
-  if (
-    name.includes("view") ||
-    name.includes("observatory") ||
-    name.includes("sunset")
-  )
-    return "🌇 Afternoon";
-  if (
-    name.includes("bar") ||
-    name.includes("izakaya") ||
-    name.includes("dinner")
-  )
-    return "🌙 Evening";
-  return "🕒 Flexible";
-}
-
-// Mock AI tip (short version for itinerary)
-function getShortTip(spotName: string | null, country: string | null): string {
-  if (country?.toLowerCase() === "japan") {
-    const tips = [
-      "Try the local matcha",
-      "Visit early to avoid crowds",
-      "Ask for the secret menu",
-      "Great for solo photos",
-    ];
-    return tips[(spotName?.length || 0) % tips.length];
-  }
-  return "Local favourite";
-}
-
 export default function MyTripPage() {
   const pathname = usePathname();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
-  const [visited, setVisited] = useState<Record<string, boolean>>({});
+  const [itinerary, setItinerary] = useState<string>("");
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
@@ -94,47 +53,12 @@ export default function MyTripPage() {
       lng: t.longitude!,
     }));
 
-  // Group spots by country for days
-  const groupedByCountry = trips.reduce(
-    (acc, trip) => {
-      const country = trip.country?.trim() || "Other";
-      if (!acc[country]) acc[country] = [];
-      acc[country].push(trip);
-      return acc;
-    },
-    {} as Record<string, Trip[]>,
-  );
-
-  // Flatten spots for reordering
-  const allSpots = trips;
-
-  // Sort spots by proximity (simple greedy)
-  const reorderByRoute = () => {
-    const withCoords = allSpots.filter((s) => s.latitude && s.longitude);
-    if (withCoords.length < 2) return;
-    const sorted = [...withCoords];
-    // Greedy nearest neighbour (start from first)
-    for (let i = 0; i < sorted.length - 1; i++) {
-      let minDist = Infinity;
-      let minIdx = i + 1;
-      for (let j = i + 1; j < sorted.length; j++) {
-        const dist = Math.hypot(
-          sorted[i].latitude! - sorted[j].latitude!,
-          sorted[i].longitude! - sorted[j].longitude!,
-        );
-        if (dist < minDist) {
-          minDist = dist;
-          minIdx = j;
-        }
-      }
-      [sorted[i + 1], sorted[minIdx]] = [sorted[minIdx], sorted[i + 1]];
-    }
-    // Reorder the main trips array (simplistic: just update state)
-    setTrips(sorted);
-  };
-
-  const toggleVisited = (id: string) => {
-    setVisited((prev) => ({ ...prev, [id]: !prev[id] }));
+  const handleGenerate = async () => {
+    setGenerating(true);
+    setItinerary("");
+    const result = await generateItinerary(trips);
+    setItinerary(result);
+    setGenerating(false);
   };
 
   return (
@@ -164,10 +88,10 @@ export default function MyTripPage() {
       <div className="s-content">
         <div className="s-hero">
           <h1>My Trip</h1>
-          <span className="s-count-badge">✈️ Smart itinerary</span>
+          <span className="s-count-badge">✈️ AI‑powered itinerary</span>
         </div>
 
-        {/* Safety banner (compact) */}
+        {/* Safety banner */}
         <div
           className="s-search"
           style={{
@@ -192,40 +116,240 @@ export default function MyTripPage() {
           </p>
         </div>
 
-        {/* Map */}
-        {isClient && spotsWithCoords.length > 0 && (
-          <Suspense
-            fallback={
-              <div
-                style={{
-                  height: "300px",
-                  background: "#f0eeec",
-                  borderRadius: "24px",
-                  marginBottom: "1rem",
-                }}
-              />
-            }
-          >
-            <SpotMap spots={spotsWithCoords} />
-          </Suspense>
-        )}
-
-        {/* Route planner button */}
-        {allSpots.length > 1 && (
-          <button
-            onClick={reorderByRoute}
-            className="s-maps-btn"
+        {/* Two‑column layout for map + stats (optional) */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "1rem",
+            marginBottom: "1.5rem",
+          }}
+        >
+          {isClient && spotsWithCoords.length > 0 && (
+            <Suspense
+              fallback={
+                <div
+                  style={{
+                    height: "300px",
+                    background: "#f0eeec",
+                    borderRadius: "24px",
+                  }}
+                />
+              }
+            >
+              <SpotMap spots={spotsWithCoords} />
+            </Suspense>
+          )}
+          {/* Quick stats card */}
+          <div
+            className="s-card"
             style={{
-              marginBottom: "1rem",
-              background: "#ffb38e",
-              color: "#3d2c27",
+              padding: "1rem",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
             }}
           >
-            🔄 Reorder by route (nearest first)
-          </button>
+            <div>
+              <div style={{ fontWeight: 600 }}>📍 Saved spots</div>
+              <div
+                style={{
+                  fontSize: "1.5rem",
+                  fontWeight: 800,
+                  color: "#ff5a26",
+                }}
+              >
+                {trips.length}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontWeight: 600 }}>🗺️ Countries</div>
+              <div
+                style={{
+                  fontSize: "1.5rem",
+                  fontWeight: 800,
+                  color: "#ff5a26",
+                }}
+              >
+                {new Set(trips.map((t) => t.country).filter(Boolean)).size}
+              </div>
+            </div>
+            <button
+              onClick={handleGenerate}
+              disabled={generating || trips.length === 0}
+              className="s-maps-btn"
+              style={{
+                background: "#ff5a26",
+                color: "white",
+                padding: "0.5rem 1rem",
+                fontSize: "0.9rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+              }}
+            >
+              {generating ? (
+                <>
+                  <span
+                    className="material-symbols-outlined"
+                    style={{
+                      fontSize: "1.2rem",
+                      animation: "spin 1s linear infinite",
+                    }}
+                  >
+                    progress_activity
+                  </span>
+                  Planning...
+                </>
+              ) : (
+                <>
+                  <span
+                    className="material-symbols-outlined"
+                    style={{ fontSize: "1.2rem" }}
+                  >
+                    auto_awesome
+                  </span>
+                  Generate AI Itinerary
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* AI Itinerary Result */}
+        {itinerary && (
+          <div
+            className="s-card"
+            style={{
+              padding: "1.5rem",
+              marginBottom: "1.5rem",
+              background: "linear-gradient(145deg, #fff, #faf9f7)",
+            }}
+          >
+            <h3
+              style={{
+                fontSize: "1.3rem",
+                fontWeight: 700,
+                marginBottom: "0.75rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+              }}
+            >
+              <span
+                className="material-symbols-outlined"
+                style={{ color: "#ff5a26" }}
+              >
+                auto_awesome
+              </span>
+              Your personal travel plan
+            </h3>
+            <div
+              style={{
+                fontSize: "0.95rem",
+                lineHeight: 1.6,
+                color: "#1a1c1b",
+                "& h2": {
+                  fontSize: "1.2rem",
+                  fontWeight: 700,
+                  marginTop: "1rem",
+                  marginBottom: "0.5rem",
+                  color: "#ff5a26",
+                },
+                "& h3": {
+                  fontSize: "1rem",
+                  fontWeight: 600,
+                  marginTop: "0.75rem",
+                  color: "#3d2c27",
+                },
+                "& ul": { paddingLeft: "1.5rem", margin: "0.5rem 0" },
+                "& li": { margin: "0.25rem 0" },
+                "& p": { margin: "0.5rem 0" },
+              }}
+            >
+              <ReactMarkdown
+                components={{
+                  h2: ({ children }) => (
+                    <h2
+                      style={{
+                        fontSize: "1.25rem",
+                        fontWeight: 700,
+                        marginTop: "1rem",
+                        marginBottom: "0.5rem",
+                        color: "#ff5a26",
+                        borderLeft: "4px solid #ff5a26",
+                        paddingLeft: "0.75rem",
+                      }}
+                    >
+                      {children}
+                    </h2>
+                  ),
+                  h3: ({ children }) => (
+                    <h3
+                      style={{
+                        fontSize: "1rem",
+                        fontWeight: 600,
+                        marginTop: "0.75rem",
+                        color: "#3d2c27",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                      }}
+                    >
+                      <span
+                        className="material-symbols-outlined"
+                        style={{ fontSize: "1.2rem" }}
+                      >
+                        lightbulb
+                      </span>
+                      {children}
+                    </h3>
+                  ),
+                  ul: ({ children }) => (
+                    <ul
+                      style={{
+                        paddingLeft: "1.5rem",
+                        margin: "0.5rem 0",
+                        listStyleType: "disc",
+                      }}
+                    >
+                      {children}
+                    </ul>
+                  ),
+                  li: ({ children }) => (
+                    <li style={{ margin: "0.25rem 0", lineHeight: 1.5 }}>
+                      {children}
+                    </li>
+                  ),
+                  p: ({ children }) => (
+                    <p style={{ margin: "0.5rem 0" }}>{children}</p>
+                  ),
+                }}
+              >
+                {itinerary}
+              </ReactMarkdown>
+            </div>
+          </div>
         )}
 
-        {/* Itinerary timeline */}
+        {!itinerary && !generating && trips.length > 0 && (
+          <div
+            className="s-card"
+            style={{ padding: "1rem", textAlign: "center", color: "#8f7067" }}
+          >
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: "2rem", color: "#ff5a26" }}
+            >
+              auto_awesome
+            </span>
+            <p style={{ marginTop: "0.5rem" }}>
+              Click “Generate AI Itinerary” to get a smart, day‑by‑day plan for
+              your trip.
+            </p>
+          </div>
+        )}
+
         {loading && (
           <div className="s-empty">
             <p>Planning your trip...</p>
@@ -236,7 +360,7 @@ export default function MyTripPage() {
             <p>{error}</p>
           </div>
         )}
-        {!loading && !error && allSpots.length === 0 && (
+        {!loading && !error && trips.length === 0 && (
           <div className="s-empty">
             <span className="s-empty-icon">🗺️</span>
             <h2>No saved spots yet</h2>
@@ -248,106 +372,21 @@ export default function MyTripPage() {
             </a>
           </div>
         )}
-        {!loading && !error && allSpots.length > 0 && (
-          <div className="itinerary-timeline">
-            <h3
-              style={{
-                fontSize: "1.2rem",
-                fontWeight: 700,
-                marginBottom: "0.75rem",
-              }}
-            >
-              📅 Your trip plan
-            </h3>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.75rem",
-              }}
-            >
-              {allSpots.map((spot, idx) => {
-                const timeSlot = suggestTimeOfDay(spot.name);
-                return (
-                  <div
-                    key={spot.id}
-                    className="s-card"
-                    style={{ padding: "0.75rem" }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.75rem",
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={!!visited[spot.id]}
-                        onChange={() => toggleVisited(spot.id)}
-                        style={{
-                          width: "20px",
-                          height: "20px",
-                          cursor: "pointer",
-                        }}
-                      />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 600, fontSize: "1rem" }}>
-                          {spot.name ? spot.name.trim() : "Unnamed spot"}
-                          {spot.country && (
-                            <span
-                              style={{
-                                fontSize: "0.7rem",
-                                color: "#8f7067",
-                                marginLeft: "0.5rem",
-                              }}
-                            >
-                              {spot.country}
-                            </span>
-                          )}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: "0.75rem",
-                            color: "#8f7067",
-                            display: "flex",
-                            gap: "0.5rem",
-                            alignItems: "center",
-                            marginTop: "0.25rem",
-                          }}
-                        >
-                          <span>⏰ {timeSlot}</span>
-                          <span>•</span>
-                          <span>💡 {getShortTip(spot.name, spot.country)}</span>
-                        </div>
-                      </div>
-                      <a
-                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(spot.name || spot.instagram_url)}${spot.country ? `, ${spot.country}` : ""}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="s-maps-btn"
-                        style={{
-                          padding: "0.25rem 0.75rem",
-                          fontSize: "0.7rem",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        Map
-                      </a>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
         <div style={{ height: "5rem" }} />
       </div>
 
+      {/* Add simple spin animation */}
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+
       <nav className="s-nav">
         <a
-          href="/"
-          className={`s-nav-item ${pathname === "/" ? "active" : ""}`}
+          href="/home"
+          className={`s-nav-item ${pathname === "/home" ? "active" : ""}`}
         >
           <span className="s-nav-icon">🏠</span>
           <span>Home</span>
