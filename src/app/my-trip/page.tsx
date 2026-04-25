@@ -17,12 +17,21 @@ type Trip = {
   longitude: number | null;
 };
 
-// ----- Helper to parse AI text into nice blocks -----
+// Helper to remove any problematic characters (like �) and odd emojis
+function cleanText(text: string): string {
+  // Remove any character that is not a basic ASCII or common emoji (keep ☀️🌤️🌙🚶‍♂️🚆🚌⚠️)
+  // But simpler: remove all characters in the range U+FFFD (replacement character) and known bad ones
+  let cleaned = text.replace(/[�]/g, ""); // remove replacement character
+  // Remove any other weird emojis that are not in our allowed list (optional)
+  cleaned = cleaned.replace(/[🎉🍴👥📅🛡👩‍🍳🚗]/g, "");
+  return cleaned;
+}
+
+// ----- Parse AI text into nice blocks -----
 function parseItinerary(raw: string) {
-  // Remove asterisks and replace odd emojis with clean ones
-  let clean = raw.replace(/\*/g, "").replace(/[🍴👥📅🛡]/g, "");
-  // Split into days
-  const days = clean
+  const cleanRaw = cleanText(raw);
+  // Split into days (looking for "DAY 1:" etc.)
+  const days = cleanRaw
     .split(/\n\s*DAY\s+\d+/i)
     .filter((block) => block.trim().length > 0);
   const result: {
@@ -56,7 +65,9 @@ function parseItinerary(raw: string) {
       } else if (
         lower.includes("walk") ||
         lower.includes("take the") ||
-        lower.includes("min ride")
+        lower.includes("min ride") ||
+        lower.includes("🚶") ||
+        lower.includes("🚆")
       ) {
         blocks.push({ type: "transport", content: line.trim() });
       } else if (lower.includes("safety tip")) {
@@ -65,7 +76,6 @@ function parseItinerary(raw: string) {
           content: line.replace(/^⚠️\s*Safety tip:\s*/i, "").trim(),
         });
       } else if (line.trim().length > 0) {
-        // catch‑all (e.g., introductory text)
         blocks.push({ type: "text", content: line.trim() });
       }
     }
@@ -79,17 +89,17 @@ function renderBlock(block: { type: string; content: string }) {
   const linkify = (text: string) => {
     const instaRegex = /(https?:\/\/[^\s]*instagram\.com\/[^\s]+)/gi;
     const mapRegex =
-      /(https?:\/\/[^\s]*maps\.google\.com\/[^\s]+|https?:\/\/[^\s]*google\.com\/maps\/[^\s]+)/gi;
+      /(https?:\/\/[^\s]*google\.com\/maps\/[^\s]+|https?:\/\/[^\s]*maps\.google\.com\/[^\s]+)/gi;
     let result = text;
     result = result.replace(
       instaRegex,
-      () =>
-        `<a href="$&" target="_blank" rel="noopener noreferrer" class="itinerary-link">📸 Instagram post</a>`,
+      (match) =>
+        `<a href="${match}" target="_blank" rel="noopener noreferrer" class="itinerary-link">📸 Instagram post</a>`,
     );
     result = result.replace(
       mapRegex,
-      () =>
-        `<a href="$&" target="_blank" rel="noopener noreferrer" class="itinerary-link">🗺️ Map link</a>`,
+      (match) =>
+        `<a href="${match}" target="_blank" rel="noopener noreferrer" class="itinerary-link">🗺️ Map link</a>`,
     );
     return result;
   };
@@ -156,7 +166,6 @@ function renderBlock(block: { type: string; content: string }) {
   }
 }
 
-// ----- Main component -----
 export default function MyTripPage() {
   const pathname = usePathname();
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -421,70 +430,18 @@ export default function MyTripPage() {
       </div>
 
       <style>{`
-        .itinerary-cards {
-          display: flex;
-          flex-direction: column;
-          gap: 1.5rem;
-        }
-        .it-day-card {
-          background: white;
-          border-radius: 24px;
-          overflow: hidden;
-          box-shadow: 0 6px 28px rgba(61,44,39,0.06);
-        }
-        .it-day-header {
-          background: #ffb38e;
-          color: #3d2c27;
-          padding: 0.75rem 1.25rem;
-          font-weight: 800;
-          font-size: 1.2rem;
-        }
-        .it-day-content {
-          padding: 1.25rem;
-        }
-        .it-block, .it-transport, .it-safety {
-          display: flex;
-          gap: 0.75rem;
-          margin-bottom: 1rem;
-          align-items: flex-start;
-        }
-        .it-icon {
-          font-size: 1.4rem;
-          min-width: 2rem;
-          text-align: center;
-        }
-        .it-text {
-          flex: 1;
-          line-height: 1.5;
-          color: #1a1c1b;
-        }
-        .it-transport {
-          background: #f4f3f1;
-          padding: 0.75rem;
-          border-radius: 16px;
-          margin: 0.75rem 0;
-        }
-        .it-safety {
-          background: #fff3e0;
-          padding: 0.75rem;
-          border-radius: 16px;
-          margin-top: 0.5rem;
-        }
-        .it-text-only {
-          margin: 0.75rem 0;
-          line-height: 1.5;
-        }
-        .itinerary-link {
-          color: #ff5a26;
-          text-decoration: underline;
-          margin-left: 0.25rem;
-        }
-        .it-footer {
-          text-align: center;
-          font-size: 0.7rem;
-          color: #8f7067;
-          margin-top: 0.75rem;
-        }
+        .itinerary-cards { display: flex; flex-direction: column; gap: 1.5rem; }
+        .it-day-card { background: white; border-radius: 24px; overflow: hidden; box-shadow: 0 6px 28px rgba(61,44,39,0.06); }
+        .it-day-header { background: #ffb38e; color: #3d2c27; padding: 0.75rem 1.25rem; font-weight: 800; font-size: 1.2rem; }
+        .it-day-content { padding: 1.25rem; }
+        .it-block, .it-transport, .it-safety { display: flex; gap: 0.75rem; margin-bottom: 1rem; align-items: flex-start; }
+        .it-icon { font-size: 1.4rem; min-width: 2rem; text-align: center; }
+        .it-text { flex: 1; line-height: 1.5; color: #1a1c1b; }
+        .it-transport { background: #f4f3f1; padding: 0.75rem; border-radius: 16px; margin: 0.75rem 0; }
+        .it-safety { background: #fff3e0; padding: 0.75rem; border-radius: 16px; margin-top: 0.5rem; }
+        .it-text-only { margin: 0.75rem 0; line-height: 1.5; }
+        .itinerary-link { color: #ff5a26; text-decoration: underline; margin-left: 0.25rem; }
+        .it-footer { text-align: center; font-size: 0.7rem; color: #8f7067; margin-top: 0.75rem; }
       `}</style>
 
       <nav className="s-nav">
