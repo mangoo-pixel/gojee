@@ -17,19 +17,18 @@ type Trip = {
   longitude: number | null;
 };
 
-// Helper to remove any problematic characters (like �) and odd emojis
-function cleanText(text: string): string {
-  // Remove any character that is not a basic ASCII or common emoji (keep ☀️🌤️🌙🚶‍♂️🚆🚌⚠️)
-  // But simpler: remove all characters in the range U+FFFD (replacement character) and known bad ones
-  let cleaned = text.replace(/[�]/g, ""); // remove replacement character
-  // Remove any other weird emojis that are not in our allowed list (optional)
-  cleaned = cleaned.replace(/[🎉🍴👥📅🛡👩‍🍳🚗]/g, "");
-  return cleaned;
+// Aggressive cleaning: keep only ASCII, newlines, tabs, and common emoji ranges
+function cleanWeirdChars(text: string): string {
+  // Allow: ASCII printable (space to ~), newline, tab, carriage return, and emoji ranges:
+  // U+2600..U+26FF (misc symbols like ☀️, 🌤️, etc.), U+1F300..U+1F6FF (map, transport, warning)
+  return text.replace(
+    /[^\x20-\x7E\n\r\t\u{2600}-\u{26FF}\u{1F300}-\u{1F6FF}]/gu,
+    "",
+  );
 }
 
-// ----- Parse AI text into nice blocks -----
 function parseItinerary(raw: string) {
-  const cleanRaw = cleanText(raw);
+  const cleanRaw = cleanWeirdChars(raw);
   // Split into days (looking for "DAY 1:" etc.)
   const days = cleanRaw
     .split(/\n\s*DAY\s+\d+/i)
@@ -85,7 +84,6 @@ function parseItinerary(raw: string) {
 }
 
 function renderBlock(block: { type: string; content: string }) {
-  // Replace URLs with nice links
   const linkify = (text: string) => {
     const instaRegex = /(https?:\/\/[^\s]*instagram\.com\/[^\s]+)/gi;
     const mapRegex =
