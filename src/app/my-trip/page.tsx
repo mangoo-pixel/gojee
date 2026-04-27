@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, lazy, Suspense } from "react";
+import { useEffect, useState, lazy, Suspense, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import { generateItinerary } from "@/app/actions/generate-itinerary";
 import "@/app/trips/trips2.css";
@@ -17,10 +17,8 @@ type Trip = {
   longitude: number | null;
 };
 
-// Aggressive cleaning: keep only ASCII, newlines, tabs, and common emoji ranges
+// --- Cleaning & parsing (same as before, but added support for new block types) ---
 function cleanWeirdChars(text: string): string {
-  // Allow: ASCII printable (space to ~), newline, tab, carriage return, and emoji ranges:
-  // U+2600..U+26FF (misc symbols like ☀️, 🌤️, etc.), U+1F300..U+1F6FF (map, transport, warning)
   return text.replace(
     /[^\x20-\x7E\n\r\t\u{2600}-\u{26FF}\u{1F300}-\u{1F6FF}]/gu,
     "",
@@ -29,7 +27,6 @@ function cleanWeirdChars(text: string): string {
 
 function parseItinerary(raw: string) {
   const cleanRaw = cleanWeirdChars(raw);
-  // Split into days (looking for "DAY 1:" etc.)
   const days = cleanRaw
     .split(/\n\s*DAY\s+\d+/i)
     .filter((block) => block.trim().length > 0);
@@ -74,6 +71,16 @@ function parseItinerary(raw: string) {
           type: "safety",
           content: line.replace(/^⚠️\s*Safety tip:\s*/i, "").trim(),
         });
+      } else if (lower.includes("hidden gem")) {
+        blocks.push({
+          type: "hidden",
+          content: line.replace(/^💎\s*Hidden gem:\s*/i, "").trim(),
+        });
+      } else if (lower.includes("budget tip")) {
+        blocks.push({
+          type: "budget",
+          content: line.replace(/^💰\s*Budget tip:\s*/i, "").trim(),
+        });
       } else if (line.trim().length > 0) {
         blocks.push({ type: "text", content: line.trim() });
       }
@@ -103,67 +110,45 @@ function renderBlock(block: { type: string; content: string }) {
   };
 
   const contentHtml = linkify(block.content);
-  switch (block.type) {
-    case "morning":
-      return (
-        <div className="it-block morning">
-          <span className="it-icon">☀️</span>
-          <span
-            className="it-text"
-            dangerouslySetInnerHTML={{ __html: contentHtml }}
-          />
-        </div>
-      );
-    case "afternoon":
-      return (
-        <div className="it-block afternoon">
-          <span className="it-icon">🌤️</span>
-          <span
-            className="it-text"
-            dangerouslySetInnerHTML={{ __html: contentHtml }}
-          />
-        </div>
-      );
-    case "evening":
-      return (
-        <div className="it-block evening">
-          <span className="it-icon">🌙</span>
-          <span
-            className="it-text"
-            dangerouslySetInnerHTML={{ __html: contentHtml }}
-          />
-        </div>
-      );
-    case "transport":
-      return (
-        <div className="it-transport">
-          <span className="it-icon">🚶‍♂️</span>
-          <span
-            className="it-text"
-            dangerouslySetInnerHTML={{ __html: contentHtml }}
-          />
-        </div>
-      );
-    case "safety":
-      return (
-        <div className="it-safety">
-          <span className="it-icon">⚠️</span>
-          <span
-            className="it-text"
-            dangerouslySetInnerHTML={{ __html: contentHtml }}
-          />
-        </div>
-      );
-    default:
-      return (
-        <div
-          className="it-text-only"
+  const blockClass = `it-block ${block.type}`;
+  let icon = "";
+  if (block.type === "morning") icon = "☀️";
+  else if (block.type === "afternoon") icon = "🌤️";
+  else if (block.type === "evening") icon = "🌙";
+  else if (block.type === "transport") icon = "🚶‍♂️";
+  else if (block.type === "safety") icon = "⚠️";
+  else if (block.type === "hidden") icon = "💎";
+  else if (block.type === "budget") icon = "💰";
+  else icon = "📌";
+
+  if (
+    block.type === "transport" ||
+    block.type === "safety" ||
+    block.type === "hidden" ||
+    block.type === "budget"
+  ) {
+    return (
+      <div className={`it-${block.type}`}>
+        <span className="it-icon">{icon}</span>
+        <span
+          className="it-text"
           dangerouslySetInnerHTML={{ __html: contentHtml }}
         />
-      );
+      </div>
+    );
   }
+  return (
+    <div className="it-block">
+      <span className="it-icon">{icon}</span>
+      <span
+        className="it-text"
+        dangerouslySetInnerHTML={{ __html: contentHtml }}
+      />
+    </div>
+  );
 }
 
+// --- Main component ---
 export default function MyTripPage() {
   const pathname = usePathname();
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -176,8 +161,18 @@ export default function MyTripPage() {
     { title: string; blocks: any[] }[]
   >([]);
 
+  // Load saved itinerary from localStorage on mount
   useEffect(() => {
+    const saved = localStorage.getItem("gojee_itinerary");
+    if (saved) {
+      setItinerary(saved);
+      setParsedDays(parseItinerary(saved));
+    }
     setIsClient(true);
+  }, []);
+
+  // Fetch trips
+  useEffect(() => {
     const fetchTrips = async () => {
       try {
         const res = await fetch("/api/recent-trips?limit=100");
@@ -204,21 +199,65 @@ export default function MyTripPage() {
 
   const handleGenerate = async () => {
     setGenerating(true);
-    setItinerary("");
     const result = await generateItinerary(trips);
     setItinerary(result);
     setParsedDays(parseItinerary(result));
+    localStorage.setItem("gojee_itinerary", result);
     setGenerating(false);
   };
 
-  const copyItinerary = () => {
-    if (itinerary) {
-      const plain = itinerary
-        .replace(/\*/g, "")
-        .replace(/(https?:\/\/[^\s]+)/g, (url) => url);
-      navigator.clipboard.writeText(plain);
+  const clearItinerary = () => {
+    if (confirm("Delete the saved itinerary? You can generate a new one.")) {
+      localStorage.removeItem("gojee_itinerary");
+      setItinerary("");
+      setParsedDays([]);
+    }
+  };
+
+  const shareItinerary = () => {
+    if (!itinerary) return;
+    const text = itinerary
+      .replace(/(https?:\/\/[^\s]+)/g, "")
+      .substring(0, 2000);
+    if (navigator.share) {
+      navigator.share({ title: "My Gojee Trip Plan", text });
+    } else {
+      navigator.clipboard.writeText(text);
       alert("Itinerary copied to clipboard!");
     }
+  };
+
+  const printItinerary = () => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+    const style = `
+      <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; padding: 2rem; max-width: 800px; margin: 0 auto; }
+        .day-card { margin-bottom: 2rem; border-left: 4px solid #ff5a26; padding-left: 1rem; }
+        .day-title { font-size: 1.5rem; font-weight: bold; color: #ff5a26; }
+        .block { margin: 1rem 0; }
+        .icon { font-size: 1.2rem; margin-right: 0.5rem; }
+      </style>
+    `;
+    const content = `
+      <html><head><title>My Gojee Trip</title>${style}</head><body>
+      <h1>✈️ My Trip Itinerary</h1>
+      ${parsedDays
+        .map(
+          (day) => `
+        <div class="day-card">
+          <div class="day-title">📅 ${day.title}</div>
+          ${day.blocks.map((block) => `<div class="block"><span class="icon">${block.type === "morning" ? "☀️" : block.type === "afternoon" ? "🌤️" : block.type === "evening" ? "🌙" : block.type === "safety" ? "⚠️" : block.type === "hidden" ? "💎" : block.type === "budget" ? "💰" : "📌"}</span> ${block.content}</div>`).join("")}
+        </div>
+      `,
+        )
+        .join("")}
+      <p><small>Powered by Gojee</small></p>
+      </body></html>
+    `;
+    printWindow.document.write(content);
+    printWindow.document.close();
+    printWindow.print();
   };
 
   return (
@@ -343,27 +382,44 @@ export default function MyTripPage() {
                   gap: "0.5rem",
                 }}
               >
-                {generating ? (
-                  <>⏳ Planning...</>
-                ) : (
-                  <>✨ Generate AI Itinerary</>
-                )}
+                {generating ? "⏳ Planning..." : "✨ Generate AI Itinerary"}
               </button>
               {itinerary && (
-                <button
-                  onClick={copyItinerary}
-                  className="s-maps-btn"
-                  style={{
-                    background: "#e3e2e0",
-                    color: "#ff5a26",
-                    padding: "0.5rem 1rem",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                  }}
-                >
-                  📋 Copy
-                </button>
+                <>
+                  <button
+                    onClick={shareItinerary}
+                    className="s-maps-btn"
+                    style={{
+                      background: "#e3e2e0",
+                      color: "#ff5a26",
+                      padding: "0.5rem 1rem",
+                    }}
+                  >
+                    📤 Share
+                  </button>
+                  <button
+                    onClick={printItinerary}
+                    className="s-maps-btn"
+                    style={{
+                      background: "#e3e2e0",
+                      color: "#ff5a26",
+                      padding: "0.5rem 1rem",
+                    }}
+                  >
+                    🖨️ Print
+                  </button>
+                  <button
+                    onClick={clearItinerary}
+                    className="s-maps-btn"
+                    style={{
+                      background: "#e3e2e0",
+                      color: "#ff5a26",
+                      padding: "0.5rem 1rem",
+                    }}
+                  >
+                    🗑️ Clear
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -432,11 +488,13 @@ export default function MyTripPage() {
         .it-day-card { background: white; border-radius: 24px; overflow: hidden; box-shadow: 0 6px 28px rgba(61,44,39,0.06); }
         .it-day-header { background: #ffb38e; color: #3d2c27; padding: 0.75rem 1.25rem; font-weight: 800; font-size: 1.2rem; }
         .it-day-content { padding: 1.25rem; }
-        .it-block, .it-transport, .it-safety { display: flex; gap: 0.75rem; margin-bottom: 1rem; align-items: flex-start; }
+        .it-block, .it-transport, .it-safety, .it-hidden, .it-budget { display: flex; gap: 0.75rem; margin-bottom: 1rem; align-items: flex-start; }
         .it-icon { font-size: 1.4rem; min-width: 2rem; text-align: center; }
         .it-text { flex: 1; line-height: 1.5; color: #1a1c1b; }
         .it-transport { background: #f4f3f1; padding: 0.75rem; border-radius: 16px; margin: 0.75rem 0; }
         .it-safety { background: #fff3e0; padding: 0.75rem; border-radius: 16px; margin-top: 0.5rem; }
+        .it-hidden { background: #e6f4ea; padding: 0.75rem; border-radius: 16px; margin-top: 0.5rem; }
+        .it-budget { background: #e3f2fd; padding: 0.75rem; border-radius: 16px; margin-top: 0.5rem; }
         .it-text-only { margin: 0.75rem 0; line-height: 1.5; }
         .itinerary-link { color: #ff5a26; text-decoration: underline; margin-left: 0.25rem; }
         .it-footer { text-align: center; font-size: 0.7rem; color: #8f7067; margin-top: 0.75rem; }

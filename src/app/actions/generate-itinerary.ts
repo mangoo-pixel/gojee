@@ -15,7 +15,6 @@ export async function generateItinerary(spots: Spot[]) {
     return "No saved spots yet. Go to Home and save some Instagram links to build your itinerary.";
   }
 
-  // Prepare a list with spot details and pre‑computed map URL
   const spotsList = spots
     .map((s, i) => {
       const spotName = s.name?.trim() || "Unnamed spot";
@@ -38,7 +37,11 @@ Create a **day‑by‑day itinerary** for a solo traveller covering ALL the save
   - **Best time to visit** (e.g., "9:00 AM – quiet").
   - **Walking or transport time** from the previous spot.
   - **The exact Instagram URL** that I provided – do not change it.
-  - **The exact Google Maps link** that I provided – use it as is. Do not invent any other map URL.
+  - **The exact Google Maps link** that I provided – use it as is.
+- Additionally, add:
+  - **A hidden gem** nearby (a small cafe, viewpoint, or local shop).
+  - **A budget tip** (e.g., "free entry before 10am", "buy a day pass").
+  - **A solo traveller safety note** for that location (e.g., "well lit at night", "avoid alone after 10pm").
 - Keep each day's format like this:
 
 DAY 1: [Title]
@@ -48,8 +51,10 @@ DAY 1: [Title]
 🚆 Take the Tokyo Metro (5 min).
 🌙 Evening: ...
 ⚠️ Safety tip: ...
+💎 Hidden gem: ...
+💰 Budget tip: ...
 
-Do not add any extra commentary. Use the exact URLs I gave you.
+Do not add extra commentary. Use the exact URLs I gave you.
 `;
 
   try {
@@ -70,7 +75,6 @@ Do not add any extra commentary. Use the exact URLs I gave you.
     let content =
       completion.choices[0]?.message?.content ||
       "Sorry, I couldn't generate an itinerary. Please try again.";
-    // Remove any stray asterisks and replacement characters
     content = content.replace(/\*/g, "").replace(/[�]/g, "");
     return content;
   } catch (error) {
