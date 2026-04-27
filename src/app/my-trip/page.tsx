@@ -17,7 +17,7 @@ type Trip = {
   longitude: number | null;
 };
 
-// --- Cleaning & parsing (same as before, but added support for new block types) ---
+// --- Cleaning & parsing ---
 function cleanWeirdChars(text: string): string {
   return text.replace(
     /[^\x20-\x7E\n\r\t\u{2600}-\u{26FF}\u{1F300}-\u{1F6FF}]/gu,
@@ -90,7 +90,25 @@ function parseItinerary(raw: string) {
   return result;
 }
 
-function renderBlock(block: { type: string; content: string }) {
+// Helper to add a Google Maps search button to text that doesn't already have a link
+function addMapButtonIfNeeded(text: string, countryHint: string = ""): string {
+  if (
+    text.includes("google.com/maps") ||
+    text.includes("📸") ||
+    text.includes("🗺️")
+  )
+    return text;
+  // Extract a short phrase (first few words) as search query
+  const firstWords = text.split(" ").slice(0, 6).join(" ");
+  const query = encodeURIComponent(`${firstWords} ${countryHint}`.trim());
+  const mapLink = `https://www.google.com/maps/search/?api=1&query=${query}`;
+  return `${text} <a href="${mapLink}" target="_blank" rel="noopener noreferrer" class="itinerary-link">🔍 Map</a>`;
+}
+
+function renderBlock(
+  block: { type: string; content: string },
+  countryHint: string = "",
+) {
   const linkify = (text: string) => {
     const instaRegex = /(https?:\/\/[^\s]*instagram\.com\/[^\s]+)/gi;
     const mapRegex =
@@ -109,36 +127,36 @@ function renderBlock(block: { type: string; content: string }) {
     return result;
   };
 
-  const contentHtml = linkify(block.content);
-  const blockClass = `it-block ${block.type}`;
-  let icon = "";
-  if (block.type === "morning") icon = "☀️";
-  else if (block.type === "afternoon") icon = "🌤️";
-  else if (block.type === "evening") icon = "🌙";
-  else if (block.type === "transport") icon = "🚶‍♂️";
-  else if (block.type === "safety") icon = "⚠️";
-  else if (block.type === "hidden") icon = "💎";
-  else if (block.type === "budget") icon = "💰";
-  else icon = "📌";
-
-  if (
-    block.type === "transport" ||
-    block.type === "safety" ||
-    block.type === "hidden" ||
-    block.type === "budget"
-  ) {
-    return (
-      <div className={`it-${block.type}`}>
-        <span className="it-icon">{icon}</span>
-        <span
-          className="it-text"
-          dangerouslySetInnerHTML={{ __html: contentHtml }}
-        />
-      </div>
-    );
+  let contentHtml = linkify(block.content);
+  // For hidden and budget blocks, add a map button if there's no link yet
+  if (block.type === "hidden" || block.type === "budget") {
+    contentHtml = addMapButtonIfNeeded(contentHtml, countryHint);
   }
+
+  const icon = (() => {
+    switch (block.type) {
+      case "morning":
+        return "☀️";
+      case "afternoon":
+        return "🌤️";
+      case "evening":
+        return "🌙";
+      case "transport":
+        return "🚶‍♂️";
+      case "safety":
+        return "⚠️";
+      case "hidden":
+        return "💎";
+      case "budget":
+        return "💰";
+      default:
+        return "📌";
+    }
+  })();
+
+  const blockClass = `it-${block.type}`;
   return (
-    <div className="it-block">
+    <div className={blockClass}>
       <span className="it-icon">{icon}</span>
       <span
         className="it-text"
@@ -148,7 +166,6 @@ function renderBlock(block: { type: string; content: string }) {
   );
 }
 
-// --- Main component ---
 export default function MyTripPage() {
   const pathname = usePathname();
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -160,6 +177,7 @@ export default function MyTripPage() {
   const [parsedDays, setParsedDays] = useState<
     { title: string; blocks: any[] }[]
   >([]);
+  const [showSavedNote, setShowSavedNote] = useState(false);
 
   // Load saved itinerary from localStorage on mount
   useEffect(() => {
@@ -167,6 +185,7 @@ export default function MyTripPage() {
     if (saved) {
       setItinerary(saved);
       setParsedDays(parseItinerary(saved));
+      setShowSavedNote(true);
     }
     setIsClient(true);
   }, []);
@@ -203,6 +222,7 @@ export default function MyTripPage() {
     setItinerary(result);
     setParsedDays(parseItinerary(result));
     localStorage.setItem("gojee_itinerary", result);
+    setShowSavedNote(false);
     setGenerating(false);
   };
 
@@ -211,6 +231,7 @@ export default function MyTripPage() {
       localStorage.removeItem("gojee_itinerary");
       setItinerary("");
       setParsedDays([]);
+      setShowSavedNote(false);
     }
   };
 
@@ -259,6 +280,20 @@ export default function MyTripPage() {
     printWindow.document.close();
     printWindow.print();
   };
+
+  // Extract a country hint from the user's trips (most common country) for map suggestions
+  const countryHint = (() => {
+    const countries = trips.map((t) => t.country).filter(Boolean);
+    if (countries.length === 0) return "";
+    const counts: Record<string, number> = {};
+    countries.forEach((c) => {
+      if (c) counts[c] = (counts[c] || 0) + 1;
+    });
+    return Object.keys(counts).reduce(
+      (a, b) => (counts[a] > counts[b] ? a : b),
+      "",
+    );
+  })();
 
   return (
     <div className="s-app">
@@ -425,6 +460,25 @@ export default function MyTripPage() {
           </div>
         </div>
 
+        {/* Note if showing saved itinerary from previous session */}
+        {showSavedNote && (
+          <div
+            className="s-search"
+            style={{
+              backgroundColor: "#f0eeec",
+              borderRadius: "16px",
+              padding: "0.75rem",
+              marginBottom: "1rem",
+              fontSize: "13px",
+              textAlign: "center",
+            }}
+          >
+            📌 Showing previously generated itinerary. Click{" "}
+            <strong>Generate AI Itinerary</strong> to refresh based on your
+            latest saved spots.
+          </div>
+        )}
+
         {/* Itinerary cards */}
         {parsedDays.length > 0 && (
           <div className="itinerary-cards">
@@ -432,7 +486,9 @@ export default function MyTripPage() {
               <div key={idx} className="it-day-card">
                 <div className="it-day-header">📅 {day.title}</div>
                 <div className="it-day-content">
-                  {day.blocks.map((block, i) => renderBlock(block))}
+                  {day.blocks.map((block, i) =>
+                    renderBlock(block, countryHint),
+                  )}
                 </div>
               </div>
             ))}
