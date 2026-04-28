@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useState, lazy, Suspense } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { generateItinerary } from "@/app/actions/generate-itinerary";
 import "@/app/trips/trips2.css";
-
-const SpotMap = lazy(() => import("@/components/SpotMap"));
 
 type Trip = {
   id: string;
@@ -17,7 +15,7 @@ type Trip = {
   longitude: number | null;
 };
 
-// --- Cleaning & parsing ---
+// --- Cleaning & parsing (same as before) ---
 function cleanWeirdChars(text: string): string {
   return text.replace(
     /[^\x20-\x7E\n\r\t\u{2600}-\u{26FF}\u{1F300}-\u{1F6FF}]/gu,
@@ -147,7 +145,6 @@ export default function MyTripPage() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isClient, setIsClient] = useState(false);
   const [itinerary, setItinerary] = useState<string>("");
   const [generating, setGenerating] = useState(false);
   const [parsedDays, setParsedDays] = useState<
@@ -163,7 +160,6 @@ export default function MyTripPage() {
       setParsedDays(parseItinerary(saved));
       setShowSavedNote(true);
     }
-    setIsClient(true);
   }, []);
 
   // Fetch trips
@@ -182,15 +178,6 @@ export default function MyTripPage() {
     };
     fetchTrips();
   }, []);
-
-  const spotsWithCoords = trips
-    .filter((t) => t.latitude && t.longitude)
-    .map((t) => ({
-      id: t.id,
-      name: t.name,
-      lat: t.latitude!,
-      lng: t.longitude!,
-    }));
 
   const handleGenerate = async () => {
     setGenerating(true);
@@ -259,7 +246,6 @@ export default function MyTripPage() {
 
   return (
     <div className="s-app">
-      {/* ... topbar unchanged ... */}
       <div className="s-topbar">
         <div className="s-topbar-left">
           <div className="s-avatar">
@@ -288,7 +274,7 @@ export default function MyTripPage() {
           <span className="s-count-badge">✈️ AI‑powered itinerary</span>
         </div>
 
-        {/* Safety banner */}
+        {/* Safety banner (optional, kept for solo traveller) */}
         <div
           className="s-search"
           style={{
@@ -313,113 +299,88 @@ export default function MyTripPage() {
           </p>
         </div>
 
-        {/* Map & stats */}
-        <div style={{ marginBottom: "1.5rem" }}>
-          {isClient && spotsWithCoords.length > 0 && (
-            <Suspense
-              fallback={
-                <div
-                  style={{
-                    height: "300px",
-                    background: "#f0eeec",
-                    borderRadius: "24px",
-                    marginBottom: "1rem",
-                  }}
-                />
-              }
+        {/* Stats and buttons (without map) */}
+        <div
+          className="s-card"
+          style={{
+            padding: "1rem",
+            marginBottom: "1.5rem",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "1rem",
+          }}
+        >
+          <div>
+            <div style={{ fontWeight: 600 }}>📍 Saved spots</div>
+            <div
+              style={{ fontSize: "1.5rem", fontWeight: 800, color: "#ff5a26" }}
             >
-              <SpotMap spots={spotsWithCoords} />
-            </Suspense>
-          )}
-          <div
-            className="s-card"
-            style={{
-              padding: "1rem",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: "1rem",
-            }}
-          >
-            <div>
-              <div style={{ fontWeight: 600 }}>📍 Saved spots</div>
-              <div
-                style={{
-                  fontSize: "1.5rem",
-                  fontWeight: 800,
-                  color: "#ff5a26",
-                }}
-              >
-                {trips.length}
-              </div>
+              {trips.length}
             </div>
-            <div>
-              <div style={{ fontWeight: 600 }}>🗺️ Countries</div>
-              <div
-                style={{
-                  fontSize: "1.5rem",
-                  fontWeight: 800,
-                  color: "#ff5a26",
-                }}
-              >
-                {new Set(trips.map((t) => t.country).filter(Boolean)).size}
-              </div>
+          </div>
+          <div>
+            <div style={{ fontWeight: 600 }}>🗺️ Countries</div>
+            <div
+              style={{ fontSize: "1.5rem", fontWeight: 800, color: "#ff5a26" }}
+            >
+              {new Set(trips.map((t) => t.country).filter(Boolean)).size}
             </div>
-            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              <button
-                onClick={handleGenerate}
-                disabled={generating || trips.length === 0}
-                className="s-maps-btn"
-                style={{
-                  background: "#ff5a26",
-                  color: "white",
-                  padding: "0.5rem 1rem",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                }}
-              >
-                {generating ? "⏳ Planning..." : "✨ Generate AI Itinerary"}
-              </button>
-              {itinerary && (
-                <>
-                  <button
-                    onClick={shareItinerary}
-                    className="s-maps-btn"
-                    style={{
-                      background: "#e3e2e0",
-                      color: "#ff5a26",
-                      padding: "0.5rem 1rem",
-                    }}
-                  >
-                    📤 Share
-                  </button>
-                  <button
-                    onClick={printItinerary}
-                    className="s-maps-btn"
-                    style={{
-                      background: "#e3e2e0",
-                      color: "#ff5a26",
-                      padding: "0.5rem 1rem",
-                    }}
-                  >
-                    🖨️ Print
-                  </button>
-                  <button
-                    onClick={clearItinerary}
-                    className="s-maps-btn"
-                    style={{
-                      background: "#e3e2e0",
-                      color: "#ff5a26",
-                      padding: "0.5rem 1rem",
-                    }}
-                  >
-                    🗑️ Clear
-                  </button>
-                </>
-              )}
-            </div>
+          </div>
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+            <button
+              onClick={handleGenerate}
+              disabled={generating || trips.length === 0}
+              className="s-maps-btn"
+              style={{
+                background: "#ff5a26",
+                color: "white",
+                padding: "0.5rem 1rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+              }}
+            >
+              {generating ? "⏳ Planning..." : "✨ Generate AI Itinerary"}
+            </button>
+            {itinerary && (
+              <>
+                <button
+                  onClick={shareItinerary}
+                  className="s-maps-btn"
+                  style={{
+                    background: "#e3e2e0",
+                    color: "#ff5a26",
+                    padding: "0.5rem 1rem",
+                  }}
+                >
+                  📤 Share
+                </button>
+                <button
+                  onClick={printItinerary}
+                  className="s-maps-btn"
+                  style={{
+                    background: "#e3e2e0",
+                    color: "#ff5a26",
+                    padding: "0.5rem 1rem",
+                  }}
+                >
+                  🖨️ Print
+                </button>
+                <button
+                  onClick={clearItinerary}
+                  className="s-maps-btn"
+                  style={{
+                    background: "#e3e2e0",
+                    color: "#ff5a26",
+                    padding: "0.5rem 1rem",
+                  }}
+                >
+                  🗑️ Clear
+                </button>
+              </>
+            )}
           </div>
         </div>
 
