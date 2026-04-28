@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, lazy, Suspense, useCallback } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { usePathname } from "next/navigation";
 import { generateItinerary } from "@/app/actions/generate-itinerary";
 import "@/app/trips/trips2.css";
@@ -90,25 +90,7 @@ function parseItinerary(raw: string) {
   return result;
 }
 
-// Helper to add a Google Maps search button to text that doesn't already have a link
-function addMapButtonIfNeeded(text: string, countryHint: string = ""): string {
-  if (
-    text.includes("google.com/maps") ||
-    text.includes("📸") ||
-    text.includes("🗺️")
-  )
-    return text;
-  // Extract a short phrase (first few words) as search query
-  const firstWords = text.split(" ").slice(0, 6).join(" ");
-  const query = encodeURIComponent(`${firstWords} ${countryHint}`.trim());
-  const mapLink = `https://www.google.com/maps/search/?api=1&query=${query}`;
-  return `${text} <a href="${mapLink}" target="_blank" rel="noopener noreferrer" class="itinerary-link">🔍 Map</a>`;
-}
-
-function renderBlock(
-  block: { type: string; content: string },
-  countryHint: string = "",
-) {
+function renderBlock(block: { type: string; content: string }) {
   const linkify = (text: string) => {
     const instaRegex = /(https?:\/\/[^\s]*instagram\.com\/[^\s]+)/gi;
     const mapRegex =
@@ -127,12 +109,7 @@ function renderBlock(
     return result;
   };
 
-  let contentHtml = linkify(block.content);
-  // For hidden and budget blocks, add a map button if there's no link yet
-  if (block.type === "hidden" || block.type === "budget") {
-    contentHtml = addMapButtonIfNeeded(contentHtml, countryHint);
-  }
-
+  const contentHtml = linkify(block.content);
   const icon = (() => {
     switch (block.type) {
       case "morning":
@@ -154,9 +131,8 @@ function renderBlock(
     }
   })();
 
-  const blockClass = `it-${block.type}`;
   return (
-    <div className={blockClass}>
+    <div className={`it-${block.type}`}>
       <span className="it-icon">{icon}</span>
       <span
         className="it-text"
@@ -179,7 +155,7 @@ export default function MyTripPage() {
   >([]);
   const [showSavedNote, setShowSavedNote] = useState(false);
 
-  // Load saved itinerary from localStorage on mount
+  // Load saved from localStorage
   useEffect(() => {
     const saved = localStorage.getItem("gojee_itinerary");
     if (saved) {
@@ -281,22 +257,9 @@ export default function MyTripPage() {
     printWindow.print();
   };
 
-  // Extract a country hint from the user's trips (most common country) for map suggestions
-  const countryHint = (() => {
-    const countries = trips.map((t) => t.country).filter(Boolean);
-    if (countries.length === 0) return "";
-    const counts: Record<string, number> = {};
-    countries.forEach((c) => {
-      if (c) counts[c] = (counts[c] || 0) + 1;
-    });
-    return Object.keys(counts).reduce(
-      (a, b) => (counts[a] > counts[b] ? a : b),
-      "",
-    );
-  })();
-
   return (
     <div className="s-app">
+      {/* ... topbar unchanged ... */}
       <div className="s-topbar">
         <div className="s-topbar-left">
           <div className="s-avatar">
@@ -460,7 +423,6 @@ export default function MyTripPage() {
           </div>
         </div>
 
-        {/* Note if showing saved itinerary from previous session */}
         {showSavedNote && (
           <div
             className="s-search"
@@ -479,21 +441,25 @@ export default function MyTripPage() {
           </div>
         )}
 
-        {/* Itinerary cards */}
         {parsedDays.length > 0 && (
-          <div className="itinerary-cards">
-            {parsedDays.map((day, idx) => (
-              <div key={idx} className="it-day-card">
-                <div className="it-day-header">📅 {day.title}</div>
-                <div className="it-day-content">
-                  {day.blocks.map((block, i) =>
-                    renderBlock(block, countryHint),
-                  )}
+          <>
+            <div className="it-note">
+              💡 Tip: For any suggested hidden gem or budget spot, you can
+              long‑press the text and choose “Search with Google” to find it on
+              the map.
+            </div>
+            <div className="itinerary-cards">
+              {parsedDays.map((day, idx) => (
+                <div key={idx} className="it-day-card">
+                  <div className="it-day-header">📅 {day.title}</div>
+                  <div className="it-day-content">
+                    {day.blocks.map((block, i) => renderBlock(block))}
+                  </div>
                 </div>
-              </div>
-            ))}
-            <div className="it-footer">✨ Powered by Groq AI | Gojee</div>
-          </div>
+              ))}
+              <div className="it-footer">✨ Powered by Groq AI | Gojee</div>
+            </div>
+          </>
         )}
 
         {!itinerary && !generating && trips.length > 0 && (
@@ -554,6 +520,7 @@ export default function MyTripPage() {
         .it-text-only { margin: 0.75rem 0; line-height: 1.5; }
         .itinerary-link { color: #ff5a26; text-decoration: underline; margin-left: 0.25rem; }
         .it-footer { text-align: center; font-size: 0.7rem; color: #8f7067; margin-top: 0.75rem; }
+        .it-note { font-size: 0.75rem; text-align: center; margin-bottom: 1rem; color: #8f7067; background: #f0eeec; padding: 0.5rem; border-radius: 16px; }
       `}</style>
 
       <nav className="s-nav">

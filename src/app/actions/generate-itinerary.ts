@@ -33,28 +33,29 @@ Create a **day‑by‑day itinerary** for a solo traveller covering ALL the save
 
 - **NEVER use markdown** – no asterisks (*), no bold, no italics, no backticks.
 - Use plain text only. Use ONLY these emojis: ☀️ Morning, 🌤️ Afternoon, 🌙 Evening, 🚶‍♂️ walk, 🚆 train, 🚌 bus, ⚠️ safety.
-- For each spot, include:
+- **For each saved spot, use the exact city that appears in its name or country.** Do not invent a different city. If the spot name contains a city (e.g., "Tokyo Tower"), use Tokyo. If not, use the country as the location context.
+- For each saved spot, include:
   - **Best time to visit** (e.g., "9:00 AM – quiet").
   - **Walking or transport time** from the previous spot.
   - **The exact Instagram URL** that I provided – do not change it.
   - **The exact Google Maps link** that I provided – use it as is.
 - Additionally, add:
-  - **A hidden gem** nearby (a small cafe, viewpoint, or local shop).
+  - **A hidden gem** nearby (a small cafe, viewpoint, or local shop) – but only if you are certain it exists near the saved spot. If unsure, skip.
   - **A budget tip** (e.g., "free entry before 10am", "buy a day pass").
-  - **A solo traveller safety note** for that location (e.g., "well lit at night", "avoid alone after 10pm").
+  - **A solo traveller safety note** for that location.
 - Keep each day's format like this:
 
 DAY 1: [Title]
-☀️ Morning (9:00): [Activity]. Best time: [time]. Instagram: [url] Map: [url]
+☀️ Morning (9:00): [Activity] – [description]. Best time: [time]. Instagram: [url] Map: [url]
 🚶‍♂️ Walk 12 min to next spot.
 🌤️ Afternoon (13:00): ...
 🚆 Take the Tokyo Metro (5 min).
 🌙 Evening: ...
 ⚠️ Safety tip: ...
-💎 Hidden gem: ...
+💎 Hidden gem: ... (only if confident)
 💰 Budget tip: ...
 
-Do not add extra commentary. Use the exact URLs I gave you.
+Do not add extra commentary. Use the exact URLs I gave you. Never invent a city that is not in the spot's name or country.
 `;
 
   try {
