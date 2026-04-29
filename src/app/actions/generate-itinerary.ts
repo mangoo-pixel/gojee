@@ -6,69 +6,37 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 type Spot = {
   name: string | null;
+  city: string | null;
   country: string | null;
   instagram_url: string;
 };
-
-// Helper to extract city from spot name (basic)
-function extractCity(name: string): string {
-  const cities = [
-    "Tokyo",
-    "Kyoto",
-    "Osaka",
-    "Yokohama",
-    "Nagoya",
-    "Sapporo",
-    "Fukuoka",
-    "Kobe",
-    "Nara",
-    "Hiroshima",
-  ];
-  for (const city of cities) {
-    if (name.includes(city)) return city;
-  }
-  return "";
-}
 
 export async function generateItinerary(spots: Spot[]) {
   if (!spots.length) {
     return "No saved spots yet. Go to Home and save some Instagram links to build your itinerary.";
   }
 
-  // Group spots by city before sending to AI
-  const spotsByCity: Record<string, Spot[]> = {};
-  for (const spot of spots) {
-    const spotName = spot.name?.trim() || "Unnamed spot";
-    let city = extractCity(spotName);
-    if (!city && spot.country) city = spot.country; // fallback to country
-    if (!city) city = "Other";
-    if (!spotsByCity[city]) spotsByCity[city] = [];
-    spotsByCity[city].push(spot);
-  }
-
-  const citySections = Object.entries(spotsByCity)
-    .map(([city, citySpots]) => {
-      const spotsList = citySpots
-        .map((s, i) => {
-          const spotName = s.name?.trim() || "Unnamed spot";
-          const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(spotName + (city !== "Other" ? `, ${city}` : ""))}`;
-          return `${i + 1}. ${spotName}\n   Instagram: ${s.instagram_url}\n   Map link: ${mapUrl}`;
-        })
-        .join("\n");
-      return `CITY: ${city}\n${spotsList}`;
+  const spotsList = spots
+    .map((s, i) => {
+      const spotName = s.name?.trim() || "Unnamed spot";
+      const city = s.city?.trim() || "";
+      const country = s.country?.trim() || "";
+      const location = city ? `${city}, ${country}` : country;
+      const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(spotName + (location ? `, ${location}` : ""))}`;
+      return `${i + 1}. ${spotName} (${location || "unknown location"})\n   Instagram: ${s.instagram_url}\n   Map link: ${mapUrl}`;
     })
-    .join("\n\n");
+    .join("\n");
 
   const prompt = `
-You are Gojee, a practical solo‑travel assistant. The user has saved these spots, grouped by city:
+You are Gojee, a practical solo‑travel assistant. The user has saved these spots:
 
-${citySections}
+${spotsList}
 
 Create a **day‑by‑day itinerary** for a solo traveller. Follow these rules exactly:
 
-- **NEVER combine spots from different cities in the same day**. Each day must belong to ONE city.
+- **Group spots by city**: All spots that belong to the same city MUST be on the same day. Never put spots from different cities on the same day.
 - Use plain text only. Use ONLY these emojis: ☀️ Morning, 🌤️ Afternoon, 🌙 Evening, ⚠️ safety, 💎 hidden gem, 💰 budget tip.
-- **Do NOT invent walking times or transport** – just describe the activity and best time.
+- Do NOT invent walking times or transport – just describe the activity and best time.
 - For each spot, include:
   - Best time to visit (e.g., "9:00 AM – quiet").
   - The exact Instagram URL (use the one I gave).
@@ -84,7 +52,7 @@ DAY 1: [City name]
 💎 Hidden gem: ... (optional)
 💰 Budget tip: ...
 
-Do not add commentary. Do not mix cities.
+Do not add commentary. Never combine different cities in one day.
 `;
 
   try {
@@ -93,7 +61,7 @@ Do not add commentary. Do not mix cities.
         {
           role: "system",
           content:
-            "You are a travel planner. Output plain text only – no markdown, no asterisks. Never combine different cities in the same day.",
+            "You are a travel planner. Output plain text only – no markdown, no asterisks. Never combine spots from different cities in the same day.",
         },
         { role: "user", content: prompt },
       ],
