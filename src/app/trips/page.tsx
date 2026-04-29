@@ -9,6 +9,7 @@ import "./trips2.css";
 type Trip = {
   id: string;
   name: string | null;
+  city: string | null;
   instagram_url: string;
   created_at: string | null;
   country: string | null;
@@ -16,7 +17,7 @@ type Trip = {
   longitude?: number | null;
 };
 
-// Country code mapping (keep your existing map)
+// Comprehensive country name → country code mapping (ISO 3166-1 alpha-2)
 const countryCodeMap: Record<string, string> = {
   "united states": "US",
   usa: "US",

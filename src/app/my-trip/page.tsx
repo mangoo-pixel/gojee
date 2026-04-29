@@ -8,6 +8,7 @@ import "@/app/trips/trips2.css";
 type Trip = {
   id: string;
   name: string | null;
+  city: string | null;
   instagram_url: string;
   created_at: string | null;
   country: string | null;
@@ -15,7 +16,6 @@ type Trip = {
   longitude: number | null;
 };
 
-// --- Cleaning & parsing (same as before) ---
 function cleanWeirdChars(text: string): string {
   return text.replace(
     /[^\x20-\x7E\n\r\t\u{2600}-\u{26FF}\u{1F300}-\u{1F6FF}]/gu,
@@ -56,14 +56,6 @@ function parseItinerary(raw: string) {
           type: "evening",
           content: line.replace(/^(🌙\s*Evening|Evening)\s*/, "").trim(),
         });
-      } else if (
-        lower.includes("walk") ||
-        lower.includes("take the") ||
-        lower.includes("min ride") ||
-        lower.includes("🚶") ||
-        lower.includes("🚆")
-      ) {
-        blocks.push({ type: "transport", content: line.trim() });
       } else if (lower.includes("safety tip")) {
         blocks.push({
           type: "safety",
@@ -116,8 +108,6 @@ function renderBlock(block: { type: string; content: string }) {
         return "🌤️";
       case "evening":
         return "🌙";
-      case "transport":
-        return "🚶‍♂️";
       case "safety":
         return "⚠️";
       case "hidden":
@@ -152,7 +142,6 @@ export default function MyTripPage() {
   >([]);
   const [showSavedNote, setShowSavedNote] = useState(false);
 
-  // Load saved from localStorage
   useEffect(() => {
     const saved = localStorage.getItem("gojee_itinerary");
     if (saved) {
@@ -162,7 +151,6 @@ export default function MyTripPage() {
     }
   }, []);
 
-  // Fetch trips
   useEffect(() => {
     const fetchTrips = async () => {
       try {
@@ -274,7 +262,6 @@ export default function MyTripPage() {
           <span className="s-count-badge">✈️ AI‑powered itinerary</span>
         </div>
 
-        {/* Safety banner (optional, kept for solo traveller) */}
         <div
           className="s-search"
           style={{
@@ -299,7 +286,6 @@ export default function MyTripPage() {
           </p>
         </div>
 
-        {/* Stats and buttons (without map) */}
         <div
           className="s-card"
           style={{
@@ -471,14 +457,17 @@ export default function MyTripPage() {
         .it-day-card { background: white; border-radius: 24px; overflow: hidden; box-shadow: 0 6px 28px rgba(61,44,39,0.06); }
         .it-day-header { background: #ffb38e; color: #3d2c27; padding: 0.75rem 1.25rem; font-weight: 800; font-size: 1.2rem; }
         .it-day-content { padding: 1.25rem; }
-        .it-block, .it-transport, .it-safety, .it-hidden, .it-budget { display: flex; gap: 0.75rem; margin-bottom: 1rem; align-items: flex-start; }
+        .it-morning, .it-afternoon, .it-evening, .it-safety, .it-hidden, .it-budget {
+          display: flex;
+          gap: 0.75rem;
+          margin-bottom: 1rem;
+          align-items: flex-start;
+        }
         .it-icon { font-size: 1.4rem; min-width: 2rem; text-align: center; }
         .it-text { flex: 1; line-height: 1.5; color: #1a1c1b; }
-        .it-transport { background: #f4f3f1; padding: 0.75rem; border-radius: 16px; margin: 0.75rem 0; }
-        .it-safety { background: #fff3e0; padding: 0.75rem; border-radius: 16px; margin-top: 0.5rem; }
-        .it-hidden { background: #e6f4ea; padding: 0.75rem; border-radius: 16px; margin-top: 0.5rem; }
-        .it-budget { background: #e3f2fd; padding: 0.75rem; border-radius: 16px; margin-top: 0.5rem; }
-        .it-text-only { margin: 0.75rem 0; line-height: 1.5; }
+        .it-safety { background: #fff3e0; padding: 0.75rem; border-radius: 16px; margin: 0.75rem 0; }
+        .it-hidden { background: #e6f4ea; padding: 0.75rem; border-radius: 16px; margin: 0.75rem 0; }
+        .it-budget { background: #e3f2fd; padding: 0.75rem; border-radius: 16px; margin: 0.75rem 0; }
         .itinerary-link { color: #ff5a26; text-decoration: underline; margin-left: 0.25rem; }
         .it-footer { text-align: center; font-size: 0.7rem; color: #8f7067; margin-top: 0.75rem; }
         .it-note { font-size: 0.75rem; text-align: center; margin-bottom: 1rem; color: #8f7067; background: #f0eeec; padding: 0.5rem; border-radius: 16px; }
