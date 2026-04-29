@@ -10,52 +10,81 @@ type Spot = {
   instagram_url: string;
 };
 
+// Helper to extract city from spot name (basic)
+function extractCity(name: string): string {
+  const cities = [
+    "Tokyo",
+    "Kyoto",
+    "Osaka",
+    "Yokohama",
+    "Nagoya",
+    "Sapporo",
+    "Fukuoka",
+    "Kobe",
+    "Nara",
+    "Hiroshima",
+  ];
+  for (const city of cities) {
+    if (name.includes(city)) return city;
+  }
+  return "";
+}
+
 export async function generateItinerary(spots: Spot[]) {
   if (!spots.length) {
     return "No saved spots yet. Go to Home and save some Instagram links to build your itinerary.";
   }
 
-  const spotsList = spots
-    .map((s, i) => {
-      const spotName = s.name?.trim() || "Unnamed spot";
-      const country = s.country?.trim() || "";
-      const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(spotName + (country ? `, ${country}` : ""))}`;
-      return `${i + 1}. ${spotName} (${country || "Unknown country"})\n   Instagram: ${s.instagram_url}\n   Map link: ${mapUrl}`;
+  // Group spots by city before sending to AI
+  const spotsByCity: Record<string, Spot[]> = {};
+  for (const spot of spots) {
+    const spotName = spot.name?.trim() || "Unnamed spot";
+    let city = extractCity(spotName);
+    if (!city && spot.country) city = spot.country; // fallback to country
+    if (!city) city = "Other";
+    if (!spotsByCity[city]) spotsByCity[city] = [];
+    spotsByCity[city].push(spot);
+  }
+
+  const citySections = Object.entries(spotsByCity)
+    .map(([city, citySpots]) => {
+      const spotsList = citySpots
+        .map((s, i) => {
+          const spotName = s.name?.trim() || "Unnamed spot";
+          const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(spotName + (city !== "Other" ? `, ${city}` : ""))}`;
+          return `${i + 1}. ${spotName}\n   Instagram: ${s.instagram_url}\n   Map link: ${mapUrl}`;
+        })
+        .join("\n");
+      return `CITY: ${city}\n${spotsList}`;
     })
-    .join("\n");
+    .join("\n\n");
 
   const prompt = `
-You are Gojee, a practical solo‑travel assistant. The user has saved these spots with their exact Instagram and map links:
+You are Gojee, a practical solo‑travel assistant. The user has saved these spots, grouped by city:
 
-${spotsList}
+${citySections}
 
-Create a **day‑by‑day itinerary** for a solo traveller covering ALL the saved spots. Follow these rules exactly:
+Create a **day‑by‑day itinerary** for a solo traveller. Follow these rules exactly:
 
-- **NEVER use markdown** – no asterisks (*), no bold, no italics, no backticks.
-- Use plain text only. Use ONLY these emojis: ☀️ Morning, 🌤️ Afternoon, 🌙 Evening, 🚶‍♂️ walk, 🚆 train, 🚌 bus, ⚠️ safety.
-- **For each saved spot, use the exact city that appears in its name or country.** Do not invent a different city. If the spot name contains a city (e.g., "Tokyo Tower"), use Tokyo. If not, use the country as the location context.
-- For each saved spot, include:
-  - **Best time to visit** (e.g., "9:00 AM – quiet").
-  - **Walking or transport time** from the previous spot.
-  - **The exact Instagram URL** that I provided – do not change it.
-  - **The exact Google Maps link** that I provided – use it as is.
-- Additionally, add:
-  - **A hidden gem** nearby (a small cafe, viewpoint, or local shop) – but only if you are certain it exists near the saved spot. If unsure, skip.
-  - **A budget tip** (e.g., "free entry before 10am", "buy a day pass").
-  - **A solo traveller safety note** for that location.
-- Keep each day's format like this:
+- **NEVER combine spots from different cities in the same day**. Each day must belong to ONE city.
+- Use plain text only. Use ONLY these emojis: ☀️ Morning, 🌤️ Afternoon, 🌙 Evening, ⚠️ safety, 💎 hidden gem, 💰 budget tip.
+- **Do NOT invent walking times or transport** – just describe the activity and best time.
+- For each spot, include:
+  - Best time to visit (e.g., "9:00 AM – quiet").
+  - The exact Instagram URL (use the one I gave).
+  - The exact Google Maps link (use the one I gave).
+- Add optional: hidden gem, budget tip, safety note.
+- Format each day like this:
 
-DAY 1: [Title]
-☀️ Morning (9:00): [Activity] – [description]. Best time: [time]. Instagram: [url] Map: [url]
-🚶‍♂️ Walk 12 min to next spot.
-🌤️ Afternoon (13:00): ...
-🚆 Take the Tokyo Metro (5 min).
+DAY 1: [City name]
+☀️ Morning (9:00): [Activity]. Best time: [time]. Instagram: [url] Map: [url]
+🌤️ Afternoon (13:00): ... (next spot in same city)
 🌙 Evening: ...
 ⚠️ Safety tip: ...
-💎 Hidden gem: ... (only if confident)
+💎 Hidden gem: ... (optional)
 💰 Budget tip: ...
 
-Do not add extra commentary. Use the exact URLs I gave you. Never invent a city that is not in the spot's name or country.
+Do not add commentary. Do not mix cities.
 `;
 
   try {
@@ -64,13 +93,13 @@ Do not add extra commentary. Use the exact URLs I gave you. Never invent a city 
         {
           role: "system",
           content:
-            "You are a travel planner. Output plain text only – no markdown, no asterisks, no code blocks. Use the exact URLs provided.",
+            "You are a travel planner. Output plain text only – no markdown, no asterisks. Never combine different cities in the same day.",
         },
         { role: "user", content: prompt },
       ],
       model: "llama-3.3-70b-versatile",
-      temperature: 0.6,
-      max_tokens: 2500,
+      temperature: 0.5,
+      max_tokens: 2000,
     });
 
     let content =
