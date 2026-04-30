@@ -15,6 +15,10 @@ export default function HomePage() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isPending, startTransition] = useTransition();
   const [showChinaWarning, setShowChinaWarning] = useState(false);
+  const [toast, setToast] = useState<{ show: boolean; message: string }>({
+    show: false,
+    message: "",
+  });
 
   const extractFromInstagramUrl = (url: string): string | null => {
     const match = url.match(/instagram\.com\/p\/([A-Za-z0-9_-]+)/);
@@ -56,13 +60,13 @@ export default function HomePage() {
         if (result.success) {
           const now = new Date();
           setLastSaved(now);
-          setMessage({ text: "✨ Just saved! ✨", type: "success" });
+          setToast({ show: true, message: "✨ Just saved! ✨" });
+          setTimeout(() => setToast({ show: false, message: "" }), 3000);
           setUrl("");
           setName("");
           setCity("");
           setCountry("");
           setShowChinaWarning(false);
-          setTimeout(() => setMessage({ text: "", type: "" }), 3000);
         } else {
           throw new Error("Save failed");
         }
@@ -191,13 +195,9 @@ export default function HomePage() {
           <button type="submit" className="s-maps-btn" disabled={isPending}>
             {isPending ? "Saving..." : "Save spot"}
           </button>
-          {message.text && (
+          {message.text && message.type !== "success" && (
             <div
-              style={{
-                textAlign: "center",
-                marginTop: "0.5rem",
-                color: message.type === "success" ? "green" : "red",
-              }}
+              style={{ textAlign: "center", marginTop: "0.5rem", color: "red" }}
             >
               {message.text}
             </div>
@@ -216,6 +216,28 @@ export default function HomePage() {
           )}
         </form>
       </div>
+
+      {/* Toast notification – prominent orange bar */}
+      {toast.show && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: "80px",
+            left: "16px",
+            right: "16px",
+            backgroundColor: "#ff5a26",
+            color: "white",
+            padding: "12px",
+            borderRadius: "40px",
+            textAlign: "center",
+            fontWeight: "bold",
+            zIndex: 1000,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+          }}
+        >
+          ✅ {toast.message}
+        </div>
+      )}
 
       <nav className="s-nav">
         <a

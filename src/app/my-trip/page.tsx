@@ -39,7 +39,12 @@ function parseItinerary(raw: string) {
     const dayTitle = `Day ${dayNum}`;
     const blocks: { type: string; content: string }[] = [];
 
-    for (let line of lines) {
+    for (let rawLine of lines) {
+      let line = rawLine.trim();
+      // Remove duplicate emojis (e.g., ☀️☀️ → ☀️)
+      line = line.replace(/([☀️🌤️🌙⚠️💎💰🚶‍♂️🚆🚌])\1+/g, "$1");
+      // Skip lines that consist only of emojis and spaces (like "☀️" alone)
+      if (/^[☀️🌤️🌙⚠️💎💰🚶‍♂️🚆🚌\s]+$/.test(line)) continue;
       const lower = line.toLowerCase();
       if (lower.includes("morning") || line.includes("☀️")) {
         blocks.push({
@@ -71,8 +76,8 @@ function parseItinerary(raw: string) {
           type: "budget",
           content: line.replace(/^💰\s*Budget tip:\s*/i, "").trim(),
         });
-      } else if (line.trim().length > 0) {
-        blocks.push({ type: "text", content: line.trim() });
+      } else if (line.length > 0) {
+        blocks.push({ type: "text", content: line });
       }
     }
     result.push({ title: dayTitle, blocks });
