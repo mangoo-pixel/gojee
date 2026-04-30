@@ -3,11 +3,12 @@
 import { useState, useTransition } from "react";
 import { saveTrip } from "@/app/actions";
 import { logout } from "@/app/actions/auth";
-import "@/app/trips/trips2.css"; // ✅ absolute path
+import "@/app/trips/trips2.css";
 
 export default function HomePageAuthenticated() {
   const [url, setUrl] = useState("");
   const [name, setName] = useState("");
+  const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
   const [message, setMessage] = useState({ text: "", type: "" });
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -24,13 +25,19 @@ export default function HomePageAuthenticated() {
 
     startTransition(async () => {
       try {
-        const result = await saveTrip(url, name || null, country || null);
+        const result = await saveTrip(
+          url,
+          name || null,
+          city || null,
+          country || null,
+        );
         if (result.success) {
           const now = new Date();
           setLastSaved(now);
           setMessage({ text: "✨ Just saved! ✨", type: "success" });
           setUrl("");
           setName("");
+          setCity("");
           setCountry("");
           setTimeout(() => setMessage({ text: "", type: "" }), 3000);
         } else {
@@ -106,22 +113,29 @@ export default function HomePageAuthenticated() {
               required
             />
           </div>
-
           <div className="s-search">
             <span className="s-search-icon">place</span>
             <input
               type="text"
-              placeholder="Spot name (optional)"
+              placeholder="Real spot name – helps the map find it (e.g., 'Tokyo Tower')"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
           </div>
-
+          <div className="s-search">
+            <span className="s-search-icon">location_city</span>
+            <input
+              type="text"
+              placeholder="City (e.g., Tokyo, Kyoto) – helps group spots into days"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+            />
+          </div>
           <div className="s-search">
             <span className="s-search-icon">flag</span>
             <input
               type="text"
-              placeholder="Country (optional)"
+              placeholder="Country (optional, but improves map accuracy)"
               value={country}
               onChange={(e) => setCountry(e.target.value)}
             />
@@ -159,20 +173,25 @@ export default function HomePageAuthenticated() {
       </div>
 
       <nav className="s-nav">
-        <a href="/" className="s-nav-item active">
-          <span className="s-nav-icon">home</span>Home
+        <a href="/home" className="s-nav-item active">
+          <span className="s-nav-icon">🏠</span>
+          <span>Home</span>
         </a>
         <a href="/trips" className="s-nav-item">
-          <span className="s-nav-icon">bookmark</span>Saved
+          <span className="s-nav-icon">🔖</span>
+          <span>Saved</span>
         </a>
-        <a href="/explore" className="s-nav-item">
-          <span className="s-nav-icon">explore</span>Explore
+        <a href="/my-trip" className="s-nav-item">
+          <span className="s-nav-icon">✈️</span>
+          <span>My Trip</span>
         </a>
         <a href="/safe-help" className="s-nav-item">
-          <span className="s-nav-icon">shield_heart</span>Safety
+          <span className="s-nav-icon">🛡️</span>
+          <span>Safety</span>
         </a>
         <a href="/profile" className="s-nav-item">
-          <span className="s-nav-icon">person</span>Profile
+          <span className="s-nav-icon">👤</span>
+          <span>Profile</span>
         </a>
       </nav>
     </div>

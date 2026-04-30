@@ -161,6 +161,7 @@ export default function HomePage() {
               onChange={(e) => handleCountryChange(e.target.value)}
             />
           </div>
+
           {showChinaWarning && (
             <div
               style={{
@@ -186,6 +187,7 @@ export default function HomePage() {
               planning your trip before departure.
             </div>
           )}
+
           <button type="submit" className="s-maps-btn" disabled={isPending}>
             {isPending ? "Saving..." : "Save spot"}
           </button>
