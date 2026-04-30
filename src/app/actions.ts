@@ -29,7 +29,7 @@ async function geocodeLocation(
 export async function saveTrip(
   instagramUrl: string,
   name: string | null,
-  city: string | null,
+  city: string | null, // ✅ city parameter
   country: string | null,
 ) {
   if (!instagramUrl) throw new Error("Instagram URL is required");
@@ -54,7 +54,7 @@ export async function saveTrip(
     },
   );
 
-  // Get the authenticated user
+  // Get authenticated user
   const {
     data: { user },
     error: userError,

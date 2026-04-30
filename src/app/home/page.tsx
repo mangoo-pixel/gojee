@@ -9,6 +9,7 @@ export default function HomePage() {
   const pathname = usePathname();
   const [url, setUrl] = useState("");
   const [name, setName] = useState("");
+  const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
   const [message, setMessage] = useState({ text: "", type: "" });
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -46,13 +47,19 @@ export default function HomePage() {
     setMessage({ text: "", type: "" });
     startTransition(async () => {
       try {
-        const result = await saveTrip(url, name || null, country || null);
+        const result = await saveTrip(
+          url,
+          name || null,
+          city || null,
+          country || null,
+        );
         if (result.success) {
           const now = new Date();
           setLastSaved(now);
           setMessage({ text: "✨ Just saved! ✨", type: "success" });
           setUrl("");
           setName("");
+          setCity("");
           setCountry("");
           setShowChinaWarning(false);
           setTimeout(() => setMessage({ text: "", type: "" }), 3000);
@@ -130,6 +137,17 @@ export default function HomePage() {
               placeholder="Real spot name – helps the map find it (e.g., 'Tokyo Tower')"
               value={name}
               onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+          <div className="s-search">
+            <span className="s-search-icon material-symbols-outlined">
+              location_city
+            </span>
+            <input
+              type="text"
+              placeholder="City (e.g., Tokyo, Kyoto) – helps group spots into days"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
             />
           </div>
           <div className="s-search">
