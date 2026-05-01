@@ -17,10 +17,14 @@ type Trip = {
 };
 
 function cleanWeirdChars(text: string): string {
-  return text.replace(
+  // Remove non‑ASCII except newline, tab, and allowed emoji ranges
+  let cleaned = text.replace(
     /[^\x20-\x7E\n\r\t\u{2600}-\u{26FF}\u{1F300}-\u{1F6FF}]/gu,
     "",
   );
+  // Collapse duplicate consecutive emojis (e.g., ☀️☀️ → ☀️)
+  cleaned = cleaned.replace(/([☀️🌤️🌙⚠️💎💰🚶‍♂️🚆🚌])\1+/g, "$1");
+  return cleaned;
 }
 
 function parseItinerary(raw: string) {
@@ -41,9 +45,9 @@ function parseItinerary(raw: string) {
 
     for (let rawLine of lines) {
       let line = rawLine.trim();
-      // Remove duplicate emojis (e.g., ☀️☀️ → ☀️)
+      // Remove duplicate emojis again (safety)
       line = line.replace(/([☀️🌤️🌙⚠️💎💰🚶‍♂️🚆🚌])\1+/g, "$1");
-      // Skip lines that consist only of emojis and spaces (like "☀️" alone)
+      // Skip lines that consist only of emojis and spaces (e.g., "☀️" alone)
       if (/^[☀️🌤️🌙⚠️💎💰🚶‍♂️🚆🚌\s]+$/.test(line)) continue;
       const lower = line.toLowerCase();
       if (lower.includes("morning") || line.includes("☀️")) {
