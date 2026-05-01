@@ -35,24 +35,26 @@ ${spotsList}
 Create a **day‑by‑day itinerary** for a solo traveller. Follow these rules exactly:
 
 - **Group spots by city**: All spots that belong to the same city MUST be on the same day. Never put spots from different cities on the same day.
+- **NEVER invent specific opening hours or exact times** (like "9:00 AM"). Instead, use generic time slots: ☀️ Morning, 🌤️ Afternoon, 🌙 Evening.
+- If you don't know the exact opening time, just say "check local hours" or omit the time detail.
 - Use plain text only. Use ONLY these emojis: ☀️ Morning, 🌤️ Afternoon, 🌙 Evening, ⚠️ safety, 💎 hidden gem, 💰 budget tip.
-- Do NOT invent walking times or transport – just describe the activity and best time.
+- Do NOT invent walking times or transport – just describe the activity.
 - For each spot, include:
-  - Best time to visit (e.g., "9:00 AM – quiet").
+  - A suggested time of day (morning/afternoon/evening) – no exact hour.
   - The exact Instagram URL (use the one I gave).
   - The exact Google Maps link (use the one I gave).
-- Add optional: hidden gem, budget tip, safety note.
+- Optional: hidden gem, budget tip, safety note.
 - Format each day like this:
 
 DAY 1: [City name]
-☀️ Morning (9:00): [Activity]. Best time: [time]. Instagram: [url] Map: [url]
-🌤️ Afternoon (13:00): ... (next spot in same city)
+☀️ Morning: [Activity] – description. Instagram: [url] Map: [url]
+🌤️ Afternoon: ...
 🌙 Evening: ...
 ⚠️ Safety tip: ...
 💎 Hidden gem: ... (optional)
 💰 Budget tip: ...
 
-Do not add commentary. Never combine different cities in one day.
+Do not add commentary. Never use exact hours (e.g., "9:00 AM"). Never combine different cities in one day.
 `;
 
   try {
@@ -61,7 +63,7 @@ Do not add commentary. Never combine different cities in one day.
         {
           role: "system",
           content:
-            "You are a travel planner. Output plain text only – no markdown, no asterisks. Never combine spots from different cities in the same day.",
+            "You are a travel planner. Output plain text only – no markdown, no asterisks. Never invent exact opening times. Use only morning/afternoon/evening.",
         },
         { role: "user", content: prompt },
       ],
@@ -74,6 +76,8 @@ Do not add commentary. Never combine different cities in one day.
       completion.choices[0]?.message?.content ||
       "Sorry, I couldn't generate an itinerary. Please try again.";
     content = content.replace(/\*/g, "").replace(/[�]/g, "");
+    // Remove any remaining specific times like "9:00 AM", "10:00", "2:00 PM", etc.
+    content = content.replace(/\b\d{1,2}:\d{2}\s*(AM|PM)?\b/gi, "");
     return content;
   } catch (error) {
     console.error("Groq error:", error);
