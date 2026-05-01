@@ -60,8 +60,8 @@ export default function HomePage() {
         if (result.success) {
           const now = new Date();
           setLastSaved(now);
-          setToast({ show: true, message: "✨ Just saved! ✨" });
-          setTimeout(() => setToast({ show: false, message: "" }), 3000);
+          setToast({ show: true, message: "Spot saved! ✨" });
+          setTimeout(() => setToast({ show: false, message: "" }), 2500);
           setUrl("");
           setName("");
           setCity("");
@@ -217,25 +217,27 @@ export default function HomePage() {
         </form>
       </div>
 
-      {/* Toast notification – prominent orange bar */}
+      {/* Sleek toast notification */}
       {toast.show && (
         <div
           style={{
             position: "fixed",
-            bottom: "80px",
-            left: "16px",
-            right: "16px",
-            backgroundColor: "#ff5a26",
+            bottom: "24px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            backgroundColor: "#1a1c1b",
             color: "white",
-            padding: "12px",
+            padding: "8px 20px",
             borderRadius: "40px",
-            textAlign: "center",
-            fontWeight: "bold",
+            fontSize: "14px",
+            fontWeight: 500,
             zIndex: 1000,
-            boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            backdropFilter: "blur(4px)",
+            whiteSpace: "nowrap",
           }}
         >
-          ✅ {toast.message}
+          {toast.message}
         </div>
       )}
 
