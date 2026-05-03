@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { usePathname } from "next/navigation";
 import { generateItinerary } from "@/app/actions/generate-itinerary";
 import "@/app/trips/trips2.css";
+
+const SpotMap = lazy(() => import("@/components/SpotMap"));
 
 type Trip = {
   id: string;
@@ -16,15 +18,41 @@ type Trip = {
   longitude: number | null;
 };
 
+// Haversine distance in km
+function getDistance(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number,
+): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function formatWalkingTime(distanceKm: number): string {
+  if (distanceKm === 0) return "📍 Same spot";
+  const walkingTimeMin = Math.round((distanceKm / 5) * 60); // 5 km/h
+  if (walkingTimeMin < 1) return "Very close";
+  if (walkingTimeMin < 60) return `${walkingTimeMin} min walk`;
+  const hours = Math.floor(walkingTimeMin / 60);
+  const mins = walkingTimeMin % 60;
+  return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+}
+
 function cleanWeirdChars(text: string): string {
-  // Remove non‑ASCII except newline, tab, and allowed emoji ranges
-  let cleaned = text.replace(
+  return text.replace(
     /[^\x20-\x7E\n\r\t\u{2600}-\u{26FF}\u{1F300}-\u{1F6FF}]/gu,
     "",
   );
-  // Collapse duplicate consecutive emojis (e.g., ☀️☀️ → ☀️)
-  cleaned = cleaned.replace(/([☀️🌤️🌙⚠️💎💰🚶‍♂️🚆🚌])\1+/g, "$1");
-  return cleaned;
 }
 
 function parseItinerary(raw: string) {
@@ -45,10 +73,8 @@ function parseItinerary(raw: string) {
 
     for (let rawLine of lines) {
       let line = rawLine.trim();
-      // Remove duplicate emojis again (safety)
-      line = line.replace(/([☀️🌤️🌙⚠️💎💰🚶‍♂️🚆🚌])\1+/g, "$1");
-      // Skip lines that consist only of emojis and spaces (e.g., "☀️" alone)
-      if (/^[☀️🌤️🌙⚠️💎💰🚶‍♂️🚆🚌\s]+$/.test(line)) continue;
+      line = line.replace(/([☀️🌤️🌙⚠️💎🚶‍♂️])\1+/g, "$1");
+      if (/^[☀️🌤️🌙⚠️💎🚶‍♂️\s]+$/.test(line)) continue;
       const lower = line.toLowerCase();
       if (lower.includes("morning") || line.includes("☀️")) {
         blocks.push({
@@ -74,11 +100,6 @@ function parseItinerary(raw: string) {
         blocks.push({
           type: "hidden",
           content: line.replace(/^💎\s*Hidden gem:\s*/i, "").trim(),
-        });
-      } else if (lower.includes("budget tip")) {
-        blocks.push({
-          type: "budget",
-          content: line.replace(/^💰\s*Budget tip:\s*/i, "").trim(),
         });
       } else if (line.length > 0) {
         blocks.push({ type: "text", content: line });
@@ -121,8 +142,6 @@ function renderBlock(block: { type: string; content: string }) {
         return "⚠️";
       case "hidden":
         return "💎";
-      case "budget":
-        return "💰";
       default:
         return "📌";
     }
@@ -144,6 +163,7 @@ export default function MyTripPage() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
   const [itinerary, setItinerary] = useState<string>("");
   const [generating, setGenerating] = useState(false);
   const [parsedDays, setParsedDays] = useState<
@@ -152,6 +172,7 @@ export default function MyTripPage() {
   const [showSavedNote, setShowSavedNote] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     const saved = localStorage.getItem("gojee_itinerary");
     if (saved) {
       setItinerary(saved);
@@ -175,6 +196,15 @@ export default function MyTripPage() {
     };
     fetchTrips();
   }, []);
+
+  const spotsWithCoords = trips
+    .filter((t) => t.latitude && t.longitude)
+    .map((t) => ({
+      id: t.id,
+      name: t.name,
+      lat: t.latitude!,
+      lng: t.longitude!,
+    }));
 
   const handleGenerate = async () => {
     setGenerating(true);
@@ -228,7 +258,7 @@ export default function MyTripPage() {
           (day) => `
         <div class="day-card">
           <div class="day-title">📅 ${day.title}</div>
-          ${day.blocks.map((block) => `<div class="block"><span class="icon">${block.type === "morning" ? "☀️" : block.type === "afternoon" ? "🌤️" : block.type === "evening" ? "🌙" : block.type === "safety" ? "⚠️" : block.type === "hidden" ? "💎" : block.type === "budget" ? "💰" : "📌"}</span> ${block.content}</div>`).join("")}
+          ${day.blocks.map((block) => `<div class="block"><span class="icon">${block.type === "morning" ? "☀️" : block.type === "afternoon" ? "🌤️" : block.type === "evening" ? "🌙" : block.type === "safety" ? "⚠️" : block.type === "hidden" ? "💎" : "📌"}</span> ${block.content}</div>`).join("")}
         </div>
       `,
         )
@@ -240,6 +270,22 @@ export default function MyTripPage() {
     printWindow.document.close();
     printWindow.print();
   };
+
+  // Distance estimates between consecutive spots (by saved order)
+  const spotDistances: Record<string, string> = {};
+  for (let i = 0; i < trips.length - 1; i++) {
+    const a = trips[i];
+    const b = trips[i + 1];
+    if (a.latitude && a.longitude && b.latitude && b.longitude) {
+      const dist = getDistance(
+        a.latitude,
+        a.longitude,
+        b.latitude,
+        b.longitude,
+      );
+      spotDistances[a.id] = formatWalkingTime(dist);
+    }
+  }
 
   return (
     <div className="s-app">
@@ -268,7 +314,7 @@ export default function MyTripPage() {
       <div className="s-content">
         <div className="s-hero">
           <h1>My Trip</h1>
-          <span className="s-count-badge">✈️ AI‑powered itinerary</span>
+          <span className="s-count-badge">✈️ Smart planner</span>
         </div>
 
         <div
@@ -294,6 +340,23 @@ export default function MyTripPage() {
             cars late at night.
           </p>
         </div>
+
+        {isClient && spotsWithCoords.length > 0 && (
+          <Suspense
+            fallback={
+              <div
+                style={{
+                  height: "300px",
+                  background: "#f0eeec",
+                  borderRadius: "24px",
+                  marginBottom: "1rem",
+                }}
+              />
+            }
+          >
+            <SpotMap spots={spotsWithCoords} />
+          </Suspense>
+        )}
 
         <div
           className="s-card"
@@ -392,30 +455,77 @@ export default function MyTripPage() {
             }}
           >
             📌 Showing previously generated itinerary. Click{" "}
-            <strong>Generate AI Itinerary</strong> to refresh based on your
-            latest saved spots.
+            <strong>Generate AI Itinerary</strong> to refresh.
           </div>
         )}
 
         {parsedDays.length > 0 && (
-          <>
-            <div className="it-note">
-              💡 Tip: For any suggested hidden gem or budget spot, you can
-              long‑press the text and choose “Search with Google” to find it on
-              the map.
+          <div className="itinerary-cards">
+            {parsedDays.map((day, idx) => (
+              <div key={idx} className="it-day-card">
+                <div className="it-day-header">📅 {day.title}</div>
+                <div className="it-day-content">
+                  {day.blocks.map((block, i) => renderBlock(block))}
+                </div>
+              </div>
+            ))}
+            <div className="it-footer">
+              ✨ Powered by Gojee | Plan at your own pace
             </div>
-            <div className="itinerary-cards">
-              {parsedDays.map((day, idx) => (
-                <div key={idx} className="it-day-card">
-                  <div className="it-day-header">📅 {day.title}</div>
-                  <div className="it-day-content">
-                    {day.blocks.map((block, i) => renderBlock(block))}
+          </div>
+        )}
+
+        {/* Honest spot list with walking estimates */}
+        {trips.length > 0 && (
+          <div
+            className="s-card"
+            style={{ marginTop: "1rem", padding: "1rem" }}
+          >
+            <h3
+              style={{
+                fontSize: "1.2rem",
+                fontWeight: 700,
+                marginBottom: "0.75rem",
+              }}
+            >
+              🗺️ Your spots (approximate walking times)
+            </h3>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.5rem",
+              }}
+            >
+              {trips.map((spot, idx) => (
+                <div
+                  key={spot.id}
+                  style={{
+                    padding: "0.5rem",
+                    borderBottom: "1px solid #e3e2e0",
+                  }}
+                >
+                  <div style={{ fontWeight: 600 }}>
+                    {spot.name || "Unnamed spot"}
+                  </div>
+                  <div style={{ fontSize: "0.8rem", color: "#8f7067" }}>
+                    {idx < trips.length - 1 && spotDistances[spot.id]
+                      ? `🚶‍♂️ Next: ${spotDistances[spot.id]}`
+                      : "📍 End of list"}
                   </div>
                 </div>
               ))}
-              <div className="it-footer">✨ Powered by Groq AI | Gojee</div>
             </div>
-          </>
+            <p
+              style={{
+                fontSize: "0.7rem",
+                marginTop: "0.5rem",
+                color: "#8f7067",
+              }}
+            >
+              * walking times are estimates based on straight‑line distance.
+            </p>
+          </div>
         )}
 
         {!itinerary && !generating && trips.length > 0 && (
@@ -430,8 +540,8 @@ export default function MyTripPage() {
               auto_awesome
             </span>
             <p style={{ marginTop: "0.5rem" }}>
-              Click “Generate AI Itinerary” to get a smart, day‑by‑day plan for
-              your trip.
+              Click “Generate AI Itinerary” for a suggested flow. The map and
+              distances below are always available.
             </p>
           </div>
         )}
@@ -450,9 +560,7 @@ export default function MyTripPage() {
           <div className="s-empty">
             <span className="s-empty-icon">🗺️</span>
             <h2>No saved spots yet</h2>
-            <p>
-              Go to Home and save Instagram links – we’ll build your itinerary.
-            </p>
+            <p>Go to Home and save Instagram links – we’ll help you plan.</p>
             <a href="/" className="s-empty-link">
               Save your first spot
             </a>
@@ -466,7 +574,7 @@ export default function MyTripPage() {
         .it-day-card { background: white; border-radius: 24px; overflow: hidden; box-shadow: 0 6px 28px rgba(61,44,39,0.06); }
         .it-day-header { background: #ffb38e; color: #3d2c27; padding: 0.75rem 1.25rem; font-weight: 800; font-size: 1.2rem; }
         .it-day-content { padding: 1.25rem; }
-        .it-morning, .it-afternoon, .it-evening, .it-safety, .it-hidden, .it-budget {
+        .it-morning, .it-afternoon, .it-evening, .it-safety, .it-hidden {
           display: flex;
           gap: 0.75rem;
           margin-bottom: 1rem;
@@ -476,10 +584,8 @@ export default function MyTripPage() {
         .it-text { flex: 1; line-height: 1.5; color: #1a1c1b; }
         .it-safety { background: #fff3e0; padding: 0.75rem; border-radius: 16px; margin: 0.75rem 0; }
         .it-hidden { background: #e6f4ea; padding: 0.75rem; border-radius: 16px; margin: 0.75rem 0; }
-        .it-budget { background: #e3f2fd; padding: 0.75rem; border-radius: 16px; margin: 0.75rem 0; }
         .itinerary-link { color: #ff5a26; text-decoration: underline; margin-left: 0.25rem; }
         .it-footer { text-align: center; font-size: 0.7rem; color: #8f7067; margin-top: 0.75rem; }
-        .it-note { font-size: 0.75rem; text-align: center; margin-bottom: 1rem; color: #8f7067; background: #f0eeec; padding: 0.5rem; border-radius: 16px; }
       `}</style>
 
       <nav className="s-nav">

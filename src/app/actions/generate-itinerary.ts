@@ -16,10 +16,10 @@ export async function generateItinerary(spots: Spot[]) {
     return "No saved spots yet. Go to Home and save some Instagram links to build your itinerary.";
   }
 
-  // Group by city
+  // Group spots by city
   const spotsByCity: Record<string, Spot[]> = {};
   for (const spot of spots) {
-    const city = spot.city?.trim() || "Unknown city";
+    const city = spot.city?.trim() || "Unknown";
     if (!spotsByCity[city]) spotsByCity[city] = [];
     spotsByCity[city].push(spot);
   }
@@ -29,7 +29,7 @@ export async function generateItinerary(spots: Spot[]) {
       const spotsList = citySpots
         .map((s, i) => {
           const spotName = s.name?.trim() || "Unnamed spot";
-          const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(spotName + (city !== "Unknown city" ? `, ${city}` : ""))}`;
+          const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(spotName + (city !== "Unknown" ? `, ${city}` : ""))}`;
           return `${i + 1}. ${spotName}\n   Instagram: ${s.instagram_url}\n   Map link: ${mapUrl}`;
         })
         .join("\n");
@@ -38,32 +38,27 @@ export async function generateItinerary(spots: Spot[]) {
     .join("\n\n");
 
   const prompt = `
-You are Gojee, a practical solo‑travel assistant. The user has saved these spots, grouped by city:
+You are Gojee, a solo‑travel planner. The user has saved these spots, grouped by city:
 
 ${citySections}
 
-Create a **day‑by‑day itinerary** for a solo traveller. Follow these rules exactly:
+Create a **simple day‑by‑day itinerary** for a solo traveller. Follow these rules exactly:
 
-- Each day MUST be dedicated to ONE city. Start the day with "DAY X: [City name]".
-- **NEVER invent specific opening hours or exact times**. Use only generic time slots: ☀️ Morning, 🌤️ Afternoon, 🌙 Evening.
-- **NEVER mention prices, affordability, or cost.** Do not include any budget tips.
-- Use plain text only. Use ONLY these emojis: ☀️ Morning, 🌤️ Afternoon, 🌙 Evening, ⚠️ safety, 💎 hidden gem.
-- Do NOT invent walking times or transport – just describe the activity.
+- **Each day MUST be for ONE city**. Start the day with "DAY X: [City name]".
+- **NEVER mention prices, costs, opening hours, or transport times.** Use only ☀️ Morning, 🌤️ Afternoon, 🌙 Evening.
 - For each spot, include:
-  - A suggested time of day (morning/afternoon/evening).
-  - The exact Instagram URL (use the one I gave).
-  - The exact Google Maps link (use the one I gave).
-- Optional: hidden gem (if you are confident), safety note.
-- Format each day like this:
+  - A suggested time of day (morning/afternoon/evening) – no exact hour.
+  - The exact Instagram URL and Google Maps link (provided above).
+- You may add a very short note like "check local hours" or "popular spot" – but nothing specific.
+- Format:
 
-DAY 1: [City name]
-☀️ Morning: [Activity] – description. Instagram: [url] Map: [url]
+DAY 1: Tokyo
+☀️ Morning: Visit [Spot name]. Instagram: [url] Map: [url]
 🌤️ Afternoon: ...
 🌙 Evening: ...
-⚠️ Safety tip: ...
-💎 Hidden gem: ... (optional)
+⚠️ Safety tip: (optional, generic)
 
-Do not add commentary. Never mix cities. Never mention prices or budget.
+Do not add any extra commentary. No markdown, no asterisks.
 `;
 
   try {
@@ -72,29 +67,20 @@ Do not add commentary. Never mix cities. Never mention prices or budget.
         {
           role: "system",
           content:
-            "You are a travel planner. Output plain text only – no markdown, no asterisks. Never mention prices, affordability, or budget tips. Use only morning/afternoon/evening.",
+            "You are a travel planner. Output plain text only – no markdown, no asterisks. Never invent specific facts about spots.",
         },
         { role: "user", content: prompt },
       ],
       model: "llama-3.3-70b-versatile",
-      temperature: 0.5,
-      max_tokens: 2000,
+      temperature: 0.3,
+      max_tokens: 1500,
     });
 
     let content =
       completion.choices[0]?.message?.content ||
       "Sorry, I couldn't generate an itinerary. Please try again.";
     content = content.replace(/\*/g, "").replace(/[�]/g, "");
-    // Remove any specific times (e.g., 9:00 AM)
     content = content.replace(/\b\d{1,2}:\d{2}\s*(AM|PM)?\b/gi, "");
-    // Remove any lines containing price words (case‑insensitive)
-    const priceWords =
-      /\b(cheap|affordable|expensive|price|cost|budget|¥|usd|euro|dollar)\b/i;
-    const lines = content.split("\n");
-    const filteredLines = lines.filter((line) => !priceWords.test(line));
-    content = filteredLines.join("\n");
-    // Also remove any leftover "💰" emoji
-    content = content.replace(/💰/g, "");
     return content;
   } catch (error) {
     console.error("Groq error:", error);
