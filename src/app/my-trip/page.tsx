@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useState, lazy, Suspense } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { generateItinerary } from "@/app/actions/generate-itinerary";
 import "@/app/trips/trips2.css";
-
-const SpotMap = lazy(() => import("@/components/SpotMap"));
 
 type Trip = {
   id: string;
@@ -18,36 +16,7 @@ type Trip = {
   longitude: number | null;
 };
 
-// Haversine distance in km
-function getDistance(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number,
-): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) *
-      Math.sin(dLng / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-function formatWalkingTime(distanceKm: number): string {
-  if (distanceKm === 0) return "📍 Same spot";
-  const walkingTimeMin = Math.round((distanceKm / 5) * 60); // 5 km/h
-  if (walkingTimeMin < 1) return "Very close";
-  if (walkingTimeMin < 60) return `${walkingTimeMin} min walk`;
-  const hours = Math.floor(walkingTimeMin / 60);
-  const mins = walkingTimeMin % 60;
-  return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
-}
-
+// ---- Helpers ----
 function cleanWeirdChars(text: string): string {
   return text.replace(
     /[^\x20-\x7E\n\r\t\u{2600}-\u{26FF}\u{1F300}-\u{1F6FF}]/gu,
@@ -73,7 +42,9 @@ function parseItinerary(raw: string) {
 
     for (let rawLine of lines) {
       let line = rawLine.trim();
+      // Remove duplicate emojis
       line = line.replace(/([☀️🌤️🌙⚠️💎🚶‍♂️])\1+/g, "$1");
+      // Skip lines that are only emojis
       if (/^[☀️🌤️🌙⚠️💎🚶‍♂️\s]+$/.test(line)) continue;
       const lower = line.toLowerCase();
       if (lower.includes("morning") || line.includes("☀️")) {
@@ -158,12 +129,41 @@ function renderBlock(block: { type: string; content: string }) {
   );
 }
 
+// Simple walking time from distance (km)
+function formatWalkingTime(distKm: number): string {
+  if (distKm === 0) return "very close";
+  const minutes = Math.round((distKm / 5) * 60);
+  if (minutes < 1) return "very close";
+  if (minutes < 60) return `${minutes} min walk`;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+}
+
+// Haversine distance in km
+function distanceKm(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number,
+): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
 export default function MyTripPage() {
   const pathname = usePathname();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isClient, setIsClient] = useState(false);
   const [itinerary, setItinerary] = useState<string>("");
   const [generating, setGenerating] = useState(false);
   const [parsedDays, setParsedDays] = useState<
@@ -171,8 +171,8 @@ export default function MyTripPage() {
   >([]);
   const [showSavedNote, setShowSavedNote] = useState(false);
 
+  // Load saved itinerary from localStorage
   useEffect(() => {
-    setIsClient(true);
     const saved = localStorage.getItem("gojee_itinerary");
     if (saved) {
       setItinerary(saved);
@@ -181,6 +181,7 @@ export default function MyTripPage() {
     }
   }, []);
 
+  // Fetch trips
   useEffect(() => {
     const fetchTrips = async () => {
       try {
@@ -196,15 +197,6 @@ export default function MyTripPage() {
     };
     fetchTrips();
   }, []);
-
-  const spotsWithCoords = trips
-    .filter((t) => t.latitude && t.longitude)
-    .map((t) => ({
-      id: t.id,
-      name: t.name,
-      lat: t.latitude!,
-      lng: t.longitude!,
-    }));
 
   const handleGenerate = async () => {
     setGenerating(true);
@@ -271,19 +263,18 @@ export default function MyTripPage() {
     printWindow.print();
   };
 
-  // Distance estimates between consecutive spots (by saved order)
-  const spotDistances: Record<string, string> = {};
+  // Build walking time list BETWEEN spots (not for each spot)
+  const walkingTimes: { from: string; to: string; time: string }[] = [];
   for (let i = 0; i < trips.length - 1; i++) {
     const a = trips[i];
     const b = trips[i + 1];
     if (a.latitude && a.longitude && b.latitude && b.longitude) {
-      const dist = getDistance(
-        a.latitude,
-        a.longitude,
-        b.latitude,
-        b.longitude,
-      );
-      spotDistances[a.id] = formatWalkingTime(dist);
+      const dist = distanceKm(a.latitude, a.longitude, b.latitude, b.longitude);
+      walkingTimes.push({
+        from: a.name || "Unnamed",
+        to: b.name || "Unnamed",
+        time: formatWalkingTime(dist),
+      });
     }
   }
 
@@ -317,6 +308,7 @@ export default function MyTripPage() {
           <span className="s-count-badge">✈️ Smart planner</span>
         </div>
 
+        {/* Safety banner */}
         <div
           className="s-search"
           style={{
@@ -341,23 +333,7 @@ export default function MyTripPage() {
           </p>
         </div>
 
-        {isClient && spotsWithCoords.length > 0 && (
-          <Suspense
-            fallback={
-              <div
-                style={{
-                  height: "300px",
-                  background: "#f0eeec",
-                  borderRadius: "24px",
-                  marginBottom: "1rem",
-                }}
-              />
-            }
-          >
-            <SpotMap spots={spotsWithCoords} />
-          </Suspense>
-        )}
-
+        {/* Stats and controls */}
         <div
           className="s-card"
           style={{
@@ -455,10 +431,12 @@ export default function MyTripPage() {
             }}
           >
             📌 Showing previously generated itinerary. Click{" "}
-            <strong>Generate AI Itinerary</strong> to refresh.
+            <strong>Generate AI Itinerary</strong> to refresh based on your
+            latest saved spots.
           </div>
         )}
 
+        {/* Itinerary cards */}
         {parsedDays.length > 0 && (
           <div className="itinerary-cards">
             {parsedDays.map((day, idx) => (
@@ -475,8 +453,8 @@ export default function MyTripPage() {
           </div>
         )}
 
-        {/* Honest spot list with walking estimates */}
-        {trips.length > 0 && (
+        {/* Walking time between spots (non‑AI, honest estimates) */}
+        {walkingTimes.length > 0 && (
           <div
             className="s-card"
             style={{ marginTop: "1rem", padding: "1rem" }}
@@ -488,7 +466,7 @@ export default function MyTripPage() {
                 marginBottom: "0.75rem",
               }}
             >
-              🗺️ Your spots (approximate walking times)
+              🚶‍♂️ Approximate walking times (between spots)
             </h3>
             <div
               style={{
@@ -497,22 +475,20 @@ export default function MyTripPage() {
                 gap: "0.5rem",
               }}
             >
-              {trips.map((spot, idx) => (
+              {walkingTimes.map((wt, idx) => (
                 <div
-                  key={spot.id}
+                  key={idx}
                   style={{
                     padding: "0.5rem",
                     borderBottom: "1px solid #e3e2e0",
                   }}
                 >
-                  <div style={{ fontWeight: 600 }}>
-                    {spot.name || "Unnamed spot"}
-                  </div>
-                  <div style={{ fontSize: "0.8rem", color: "#8f7067" }}>
-                    {idx < trips.length - 1 && spotDistances[spot.id]
-                      ? `🚶‍♂️ Next: ${spotDistances[spot.id]}`
-                      : "📍 End of list"}
-                  </div>
+                  <span style={{ fontWeight: 500 }}>{wt.from}</span> →{" "}
+                  <span style={{ fontWeight: 500 }}>{wt.to}</span>
+                  <br />
+                  <span style={{ fontSize: "0.8rem", color: "#8f7067" }}>
+                    🚶 {wt.time}
+                  </span>
                 </div>
               ))}
             </div>
@@ -523,7 +499,8 @@ export default function MyTripPage() {
                 color: "#8f7067",
               }}
             >
-              * walking times are estimates based on straight‑line distance.
+              * Times are rough estimates using straight‑line distance; actual
+              walking time may vary.
             </p>
           </div>
         )}
@@ -540,8 +517,9 @@ export default function MyTripPage() {
               auto_awesome
             </span>
             <p style={{ marginTop: "0.5rem" }}>
-              Click “Generate AI Itinerary” for a suggested flow. The map and
-              distances below are always available.
+              Click “Generate AI Itinerary” to get a day‑by‑day suggestion.
+              Walking distances between consecutive spots are always shown
+              below.
             </p>
           </div>
         )}
