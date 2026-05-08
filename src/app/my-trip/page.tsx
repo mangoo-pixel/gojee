@@ -15,6 +15,34 @@ type Trip = {
   longitude: number | null;
 };
 
+// List of major Japanese cities (extend as needed)
+const cityKeywords = [
+  "tokyo",
+  "kyoto",
+  "osaka",
+  "yokohama",
+  "nagoya",
+  "sapporo",
+  "fukuoka",
+  "kobe",
+  "nara",
+  "hiroshima",
+  "kanazawa",
+  "nikko",
+  "hakone",
+  "kamakura",
+];
+
+function getSpotLocation(spot: Trip): string {
+  if (spot.city?.trim()) return spot.city.trim();
+  const name = spot.name?.toLowerCase() || "";
+  for (const city of cityKeywords) {
+    if (name.includes(city))
+      return city.charAt(0).toUpperCase() + city.slice(1);
+  }
+  return spot.country?.trim() || "Other";
+}
+
 // Helper: get icon and time hint based on spot name
 function getSpotMetadata(name: string | null) {
   const lowerName = (name || "").toLowerCase();
@@ -51,12 +79,11 @@ function getSpotMetadata(name: string | null) {
   return { icon: "📍", timeHint: "🕒 Flexible" };
 }
 
-// Fetch a safe AI tip for a single spot (no facts)
+// Fetch a safe AI tip for a single spot
 async function fetchSpotTip(
   spotName: string,
-  city: string | null,
+  location: string,
 ): Promise<string> {
-  const location = city ? city : "this area";
   const prompt = `Give a very short, helpful tip (max 15 words) for a solo traveller visiting "${spotName}" in ${location}. The tip can be about safety, a local custom, or something to try. Never mention prices, opening hours, walking times, or distances. Keep it positive and practical. Example: "Try the matcha latte – it's a local favourite."`;
   try {
     const res = await fetch("/api/ai-tip", {
@@ -96,12 +123,10 @@ export default function MyTripPage() {
     fetchTrips();
   }, []);
 
-  // Group by city (fallback to country)
+  // Group by derived location (city or from name)
   const grouped: Record<string, Trip[]> = {};
   for (const trip of trips) {
-    let location = trip.city?.trim();
-    if (!location) location = trip.country?.trim();
-    if (!location) location = "Other";
+    const location = getSpotLocation(trip);
     if (!grouped[location]) grouped[location] = [];
     grouped[location].push(trip);
   }
@@ -109,11 +134,11 @@ export default function MyTripPage() {
   const handleGetTip = async (
     spotId: string,
     spotName: string,
-    city: string | null,
+    location: string,
   ) => {
     if (tips[spotId] || loadingTips[spotId]) return;
     setLoadingTips((prev) => ({ ...prev, [spotId]: true }));
-    const tip = await fetchSpotTip(spotName, city);
+    const tip = await fetchSpotTip(spotName, location);
     setTips((prev) => ({ ...prev, [spotId]: tip }));
     setLoadingTips((prev) => ({ ...prev, [spotId]: false }));
   };
@@ -145,7 +170,9 @@ export default function MyTripPage() {
       <div className="s-content">
         <div className="s-hero">
           <h1>My Trip</h1>
-          <span className="s-count-badge">✈️ Your spots, organised</span>
+          <span className="s-count-badge">
+            ✈️ Your spots, organised by city
+          </span>
         </div>
 
         <div
@@ -187,8 +214,7 @@ export default function MyTripPage() {
             <span className="s-empty-icon">🗺️</span>
             <h2>No saved spots yet</h2>
             <p>
-              Go to Home and save Instagram links – we’ll group them by
-              location.
+              Go to Home and save Instagram links – we’ll group them by city.
             </p>
             <a href="/" className="s-empty-link">
               Save your first spot
@@ -243,7 +269,7 @@ export default function MyTripPage() {
                           handleGetTip(
                             spot.id,
                             spot.name || "this spot",
-                            spot.city,
+                            location,
                           )
                         }
                         disabled={isLoadingTip || !!tip}
