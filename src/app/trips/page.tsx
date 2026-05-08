@@ -212,7 +212,8 @@ export default function SavedSpotsPage() {
             (trip.name && trip.name.toLowerCase().includes(query)) ||
             (trip.instagram_url &&
               trip.instagram_url.toLowerCase().includes(query)) ||
-            (trip.country && trip.country.toLowerCase().includes(query)),
+            (trip.country && trip.country.toLowerCase().includes(query)) ||
+            (trip.city && trip.city.toLowerCase().includes(query)),
         ),
       );
     }
@@ -311,7 +312,7 @@ export default function SavedSpotsPage() {
           </span>
           <input
             type="text"
-            placeholder="Search by name, location, or URL..."
+            placeholder="Search by name, location, URL, or city..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             aria-label="Search your saved spots"
@@ -368,6 +369,18 @@ export default function SavedSpotsPage() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div className="s-card-name">
                           {trip.name ? trip.name.trim() : "Unnamed spot"}
+                          {trip.city && (
+                            <span
+                              style={{
+                                marginLeft: "0.5rem",
+                                fontSize: "12px",
+                                fontWeight: "normal",
+                                color: "#8f7067",
+                              }}
+                            >
+                              📍 {trip.city}
+                            </span>
+                          )}
                           {countryCode && (
                             <span
                               style={{ marginLeft: "0.5rem", fontSize: "14px" }}

@@ -15,102 +15,6 @@ type Trip = {
   longitude: number | null;
 };
 
-// Determine time of day based on spot name keywords
-function suggestTimeOfDay(spotName: string | null): string {
-  const name = (spotName || "").toLowerCase();
-  if (
-    name.includes("cafe") ||
-    name.includes("coffee") ||
-    name.includes("breakfast")
-  )
-    return "☀️ Morning";
-  if (
-    name.includes("lunch") ||
-    name.includes("bistro") ||
-    name.includes("restaurant")
-  )
-    return "🌤️ Afternoon";
-  if (
-    name.includes("bar") ||
-    name.includes("izakaya") ||
-    name.includes("dinner")
-  )
-    return "🌙 Evening";
-  if (
-    name.includes("view") ||
-    name.includes("observatory") ||
-    name.includes("sunset")
-  )
-    return "🌇 Late afternoon";
-  return "🕒 Flexible";
-}
-
-// Haversine distance in km
-function getDistance(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number,
-): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-function formatWalkingTime(distKm: number): string {
-  if (distKm === 0) return "very close";
-  const minutes = Math.round((distKm / 5) * 60);
-  if (minutes < 1) return "very close";
-  if (minutes < 60) return `${minutes} min walk`;
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
-}
-
-function renderSpot(
-  spot: Trip,
-  idx: number,
-  total: number,
-  distToNext?: string,
-) {
-  return (
-    <div key={spot.id} className="it-spot-item">
-      <div className="it-spot-name">{spot.name || "Unnamed spot"}</div>
-      <div className="it-spot-details">
-        <span className="it-spot-time">{suggestTimeOfDay(spot.name)}</span>
-        <div className="it-spot-links">
-          <a
-            href={spot.instagram_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="itinerary-link"
-          >
-            📸 Instagram
-          </a>
-          <a
-            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(spot.name || "" + (spot.city ? `, ${spot.city}` : spot.country ? `, ${spot.country}` : ""))}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="itinerary-link"
-          >
-            🗺️ Map
-          </a>
-        </div>
-      </div>
-      {distToNext && idx < total - 1 && (
-        <div className="it-walk-info">🚶‍♂️ Next: {distToNext}</div>
-      )}
-    </div>
-  );
-}
-
 export default function MyTripPage() {
   const pathname = usePathname();
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -133,7 +37,7 @@ export default function MyTripPage() {
     fetchTrips();
   }, []);
 
-  // Group spots by city (fallback to country)
+  // Group trips by city (prefer city, fallback to country, then "Other")
   const grouped: Record<string, Trip[]> = {};
   for (const trip of trips) {
     let location = trip.city?.trim();
@@ -141,28 +45,6 @@ export default function MyTripPage() {
     if (!location) location = "Other";
     if (!grouped[location]) grouped[location] = [];
     grouped[location].push(trip);
-  }
-
-  // Pre‑compute walking distances between consecutive spots within each group
-  const walkingInfo: Record<string, string[]> = {};
-  for (const [location, locationSpots] of Object.entries(grouped)) {
-    const distances: string[] = [];
-    for (let i = 0; i < locationSpots.length - 1; i++) {
-      const a = locationSpots[i];
-      const b = locationSpots[i + 1];
-      if (a.latitude && a.longitude && b.latitude && b.longitude) {
-        const dist = getDistance(
-          a.latitude,
-          a.longitude,
-          b.latitude,
-          b.longitude,
-        );
-        distances.push(formatWalkingTime(dist));
-      } else {
-        distances.push("unknown");
-      }
-    }
-    walkingInfo[location] = distances;
   }
 
   return (
@@ -192,9 +74,10 @@ export default function MyTripPage() {
       <div className="s-content">
         <div className="s-hero">
           <h1>My Trip</h1>
-          <span className="s-count-badge">✈️ Your spots, organised</span>
+          <span className="s-count-badge">✈️ Your spots by location</span>
         </div>
 
+        {/* Safety banner */}
         <div
           className="s-search"
           style={{
@@ -219,18 +102,6 @@ export default function MyTripPage() {
           </p>
         </div>
 
-        <div
-          className="s-card"
-          style={{ padding: "1rem", marginBottom: "1.5rem" }}
-        >
-          <div style={{ fontWeight: 600 }}>📍 Saved spots</div>
-          <div
-            style={{ fontSize: "1.5rem", fontWeight: 800, color: "#ff5a26" }}
-          >
-            {trips.length}
-          </div>
-        </div>
-
         {loading && (
           <div className="s-empty">
             <p>Loading your spots...</p>
@@ -245,94 +116,80 @@ export default function MyTripPage() {
           <div className="s-empty">
             <span className="s-empty-icon">🗺️</span>
             <h2>No saved spots yet</h2>
-            <p>Go to Home and save Instagram links – we’ll help you plan.</p>
+            <p>
+              Go to Home and save Instagram links – we’ll group them by
+              location.
+            </p>
             <a href="/" className="s-empty-link">
               Save your first spot
             </a>
           </div>
         )}
 
-        {Object.entries(grouped).map(([location, locationSpots], dayIdx) => (
+        {Object.entries(grouped).map(([location, locationSpots], idx) => (
           <div
             key={location}
-            className="it-day-card"
+            className="s-card"
             style={{ marginBottom: "1.5rem" }}
           >
-            <div className="it-day-header">
-              📅 Day {dayIdx + 1}: {location}
+            <div
+              style={{
+                background: "#ffb38e",
+                padding: "0.75rem 1.25rem",
+                fontWeight: 800,
+                fontSize: "1.2rem",
+                borderRadius: "24px 24px 0 0",
+                color: "#3d2c27",
+              }}
+            >
+              📍 {location} ({locationSpots.length})
             </div>
-            <div className="it-day-content">
-              {locationSpots.map((spot, idx) => {
-                const distToNext = walkingInfo[location]?.[idx];
-                return renderSpot(spot, idx, locationSpots.length, distToNext);
-              })}
+            <div style={{ padding: "1rem" }}>
+              {locationSpots.map((spot) => (
+                <div
+                  key={spot.id}
+                  style={{
+                    padding: "0.75rem 0",
+                    borderBottom: "1px solid #e3e2e0",
+                  }}
+                >
+                  <div style={{ fontWeight: 600, marginBottom: "0.25rem" }}>
+                    {spot.name || "Unnamed spot"}
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "1rem",
+                      fontSize: "0.85rem",
+                    }}
+                  >
+                    <a
+                      href={spot.instagram_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: "#ff5a26", textDecoration: "underline" }}
+                    >
+                      📸 Instagram
+                    </a>
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                        (spot.name || "") +
+                          (location !== "Other" ? `, ${location}` : ""),
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: "#ff5a26", textDecoration: "underline" }}
+                    >
+                      🗺️ Map
+                    </a>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         ))}
         <div style={{ height: "5rem" }} />
       </div>
-
-      <style>{`
-        .it-day-card {
-          background: white;
-          border-radius: 24px;
-          overflow: hidden;
-          box-shadow: 0 6px 28px rgba(61,44,39,0.06);
-          margin-bottom: 1.5rem;
-        }
-        .it-day-header {
-          background: #ffb38e;
-          color: #3d2c27;
-          padding: 0.75rem 1.25rem;
-          font-weight: 800;
-          font-size: 1.2rem;
-        }
-        .it-day-content {
-          padding: 1.25rem;
-        }
-        .it-spot-item {
-          margin-bottom: 1rem;
-          padding-bottom: 1rem;
-          border-bottom: 1px solid #e3e2e0;
-        }
-        .it-spot-item:last-child {
-          border-bottom: none;
-        }
-        .it-spot-name {
-          font-weight: 600;
-          font-size: 1rem;
-          margin-bottom: 0.25rem;
-        }
-        .it-spot-details {
-          display: flex;
-          flex-wrap: wrap;
-          justify-content: space-between;
-          align-items: center;
-          gap: 0.5rem;
-          font-size: 0.85rem;
-          color: #8f7067;
-        }
-        .it-spot-time {
-          background: #f0eeec;
-          padding: 0.2rem 0.6rem;
-          border-radius: 20px;
-        }
-        .it-spot-links {
-          display: flex;
-          gap: 0.75rem;
-        }
-        .itinerary-link {
-          color: #ff5a26;
-          text-decoration: underline;
-        }
-        .it-walk-info {
-          font-size: 0.75rem;
-          color: #8f7067;
-          margin-top: 0.25rem;
-          padding-left: 0.5rem;
-          border-left: 2px solid #ffb38e;
-        }
-      `}</style>
 
       <nav className="s-nav">
         <a
