@@ -15,11 +15,70 @@ type Trip = {
   longitude: number | null;
 };
 
+// Helper: get icon and time hint based on spot name
+function getSpotMetadata(name: string | null) {
+  const lowerName = (name || "").toLowerCase();
+  if (
+    lowerName.includes("cafe") ||
+    lowerName.includes("coffee") ||
+    lowerName.includes("matcha")
+  )
+    return { icon: "☕", timeHint: "🌅 Morning" };
+  if (
+    lowerName.includes("restaurant") ||
+    lowerName.includes("bistro") ||
+    lowerName.includes("izakaya")
+  )
+    return { icon: "🍽️", timeHint: "🌤️ Afternoon / Evening" };
+  if (
+    lowerName.includes("bar") ||
+    lowerName.includes("brewery") ||
+    lowerName.includes("pub")
+  )
+    return { icon: "🍺", timeHint: "🌙 Evening" };
+  if (
+    lowerName.includes("view") ||
+    lowerName.includes("observatory") ||
+    lowerName.includes("garden")
+  )
+    return { icon: "🏞️", timeHint: "🌅 Morning / 🌇 Sunset" };
+  if (
+    lowerName.includes("temple") ||
+    lowerName.includes("shrine") ||
+    lowerName.includes("museum")
+  )
+    return { icon: "🏛️", timeHint: "🌅 Morning" };
+  return { icon: "📍", timeHint: "🕒 Flexible" };
+}
+
+// Fetch a safe AI tip for a single spot (no facts)
+async function fetchSpotTip(
+  spotName: string,
+  city: string | null,
+): Promise<string> {
+  const location = city ? city : "this area";
+  const prompt = `Give a very short, helpful tip (max 15 words) for a solo traveller visiting "${spotName}" in ${location}. The tip can be about safety, a local custom, or something to try. Never mention prices, opening hours, walking times, or distances. Keep it positive and practical. Example: "Try the matcha latte – it's a local favourite."`;
+  try {
+    const res = await fetch("/api/ai-tip", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt }),
+    });
+    const data = await res.json();
+    return data.tip || "✨ Ask a local for their favourite dish!";
+  } catch (err) {
+    console.error(err);
+    return "✨ Look for the daily special!";
+  }
+}
+
 export default function MyTripPage() {
   const pathname = usePathname();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [tips, setTips] = useState<Record<string, string>>({});
+  const [loadingTips, setLoadingTips] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const fetchTrips = async () => {
@@ -37,7 +96,7 @@ export default function MyTripPage() {
     fetchTrips();
   }, []);
 
-  // Group trips by city (prefer city, fallback to country, then "Other")
+  // Group by city (fallback to country)
   const grouped: Record<string, Trip[]> = {};
   for (const trip of trips) {
     let location = trip.city?.trim();
@@ -46,6 +105,18 @@ export default function MyTripPage() {
     if (!grouped[location]) grouped[location] = [];
     grouped[location].push(trip);
   }
+
+  const handleGetTip = async (
+    spotId: string,
+    spotName: string,
+    city: string | null,
+  ) => {
+    if (tips[spotId] || loadingTips[spotId]) return;
+    setLoadingTips((prev) => ({ ...prev, [spotId]: true }));
+    const tip = await fetchSpotTip(spotName, city);
+    setTips((prev) => ({ ...prev, [spotId]: tip }));
+    setLoadingTips((prev) => ({ ...prev, [spotId]: false }));
+  };
 
   return (
     <div className="s-app">
@@ -74,10 +145,9 @@ export default function MyTripPage() {
       <div className="s-content">
         <div className="s-hero">
           <h1>My Trip</h1>
-          <span className="s-count-badge">✈️ Your spots by location</span>
+          <span className="s-count-badge">✈️ Your spots, organised</span>
         </div>
 
-        {/* Safety banner */}
         <div
           className="s-search"
           style={{
@@ -126,7 +196,7 @@ export default function MyTripPage() {
           </div>
         )}
 
-        {Object.entries(grouped).map(([location, locationSpots], idx) => (
+        {Object.entries(grouped).map(([location, locationSpots]) => (
           <div
             key={location}
             className="s-card"
@@ -145,46 +215,101 @@ export default function MyTripPage() {
               📍 {location} ({locationSpots.length})
             </div>
             <div style={{ padding: "1rem" }}>
-              {locationSpots.map((spot) => (
-                <div
-                  key={spot.id}
-                  style={{
-                    padding: "0.75rem 0",
-                    borderBottom: "1px solid #e3e2e0",
-                  }}
-                >
-                  <div style={{ fontWeight: 600, marginBottom: "0.25rem" }}>
-                    {spot.name || "Unnamed spot"}
-                  </div>
+              {locationSpots.map((spot) => {
+                const { icon, timeHint } = getSpotMetadata(spot.name);
+                const tip = tips[spot.id];
+                const isLoadingTip = loadingTips[spot.id];
+                return (
                   <div
+                    key={spot.id}
                     style={{
-                      display: "flex",
-                      gap: "1rem",
-                      fontSize: "0.85rem",
+                      padding: "0.75rem 0",
+                      borderBottom: "1px solid #e3e2e0",
                     }}
                   >
-                    <a
-                      href={spot.instagram_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ color: "#ff5a26", textDecoration: "underline" }}
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
                     >
-                      📸 Instagram
-                    </a>
-                    <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                        (spot.name || "") +
-                          (location !== "Other" ? `, ${location}` : ""),
-                      )}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ color: "#ff5a26", textDecoration: "underline" }}
+                      <div style={{ fontWeight: 600, fontSize: "1rem" }}>
+                        <span style={{ marginRight: "0.5rem" }}>{icon}</span>
+                        {spot.name || "Unnamed spot"}
+                      </div>
+                      <button
+                        onClick={() =>
+                          handleGetTip(
+                            spot.id,
+                            spot.name || "this spot",
+                            spot.city,
+                          )
+                        }
+                        disabled={isLoadingTip || !!tip}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          fontSize: "1.2rem",
+                          color: "#ff5a26",
+                        }}
+                        title="Get a friendly tip"
+                      >
+                        {isLoadingTip ? "⏳" : tip ? "✅" : "✨"}
+                      </button>
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.8rem",
+                        color: "#8f7067",
+                        marginTop: "0.25rem",
+                        display: "flex",
+                        gap: "1rem",
+                        flexWrap: "wrap",
+                      }}
                     >
-                      🗺️ Map
-                    </a>
+                      <span>{timeHint}</span>
+                      <a
+                        href={spot.instagram_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          color: "#ff5a26",
+                          textDecoration: "underline",
+                        }}
+                      >
+                        📸 Instagram
+                      </a>
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((spot.name || "") + (location !== "Other" ? `, ${location}` : ""))}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          color: "#ff5a26",
+                          textDecoration: "underline",
+                        }}
+                      >
+                        🗺️ Map
+                      </a>
+                    </div>
+                    {tip && (
+                      <div
+                        style={{
+                          marginTop: "0.5rem",
+                          padding: "0.5rem",
+                          background: "#f0eeec",
+                          borderRadius: "12px",
+                          fontSize: "0.85rem",
+                          color: "#3d2c27",
+                        }}
+                      >
+                        💡 {tip}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ))}
