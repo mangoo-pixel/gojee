@@ -17,17 +17,18 @@ export async function generateItinerary(spots: Spot[]) {
     return "No saved spots yet. Go to Home and save some Instagram links to build your itinerary.";
   }
 
-  // Group spots by city (fallback to country)
+  // Group by city (fallback to country)
   const groups: Record<string, Spot[]> = {};
   for (const spot of spots) {
     let location = spot.city?.trim();
-    if (!location) location = spot.country?.trim() || "Other";
+    if (!location) location = spot.country?.trim();
+    if (!location) location = "Other";
     if (!groups[location]) groups[location] = [];
     groups[location].push(spot);
   }
 
-  // For each group, prepare the day data
-  const daysData = Object.entries(groups)
+  // Build a structured list for each location
+  const daysInput = Object.entries(groups)
     .map(([location, locationSpots]) => {
       const spotsList = locationSpots
         .map((s, i) => {
@@ -36,25 +37,28 @@ export async function generateItinerary(spots: Spot[]) {
           return `${i + 1}. ${name}\n   Instagram: ${s.instagram_url}\n   Map link: ${mapUrl}`;
         })
         .join("\n");
-      return `DAY LOCATION: ${location}\n${spotsList}`;
+      return `LOCATION: ${location}\n${spotsList}`;
     })
     .join("\n\n");
 
   const prompt = `
-You are Gojee, a solo‑travel planner. The user has saved spots grouped by location (city or country). Each "DAY LOCATION" block below must become a separate day. Do not merge or reorder spots.
+You are Gojee, a solo‑travel planner. The user has saved spots grouped by location (city or country). Each "LOCATION: X" block below must become one separate day. Do not merge or reorder spots.
 
-${daysData}
+${daysInput}
 
-For each day, create a simple itinerary with morning, afternoon, evening. Keep the spots in the same order as listed. Use only these emojis: ☀️ Morning, 🌤️ Afternoon, 🌙 Evening. Never mention prices, hours, or transport times. For each spot, include its Instagram and Google Maps links exactly as given.
+Create a simple itinerary for each day. Use exactly this format:
 
-Format exactly like this (no extra text):
+DAY 1: [location name]
+☀️ Morning: Visit [spot name]. Instagram: [url] Map: [url]
+🌤️ Afternoon: Visit [next spot name]. Instagram: [url] Map: [url]
+🌙 Evening: [if any spot left]
 
-DAY 1: [Location name]
-☀️ Morning: Visit [Spot name]. Instagram: [url] Map: [url]
-🌤️ Afternoon: Visit [next spot]. Instagram: [url] Map: [url]
-🌙 Evening: ...
-
-Do not add any commentary. No markdown, no asterisks.
+Rules:
+- Always include the location name in the "DAY X: ..." line.
+- Never mention prices, hours, or transport.
+- Use only the URLs provided.
+- No markdown, no asterisks.
+- Do not add empty lines or extra emojis.
 `;
 
   try {
@@ -63,7 +67,7 @@ Do not add any commentary. No markdown, no asterisks.
         {
           role: "system",
           content:
-            "You are a travel planner. Output plain text only – no markdown, no asterisks. Never merge days or reorder spots. Use the exact URLs provided.",
+            "You are a travel planner. Output plain text only. Always include the location name in the day title. Never output empty lines for missing time slots; just skip them.",
         },
         { role: "user", content: prompt },
       ],
