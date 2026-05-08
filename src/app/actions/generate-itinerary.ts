@@ -5,6 +5,7 @@ import Groq from "groq-sdk";
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 type Spot = {
+  id: string;
   name: string | null;
   city: string | null;
   country: string | null;
@@ -16,50 +17,44 @@ export async function generateItinerary(spots: Spot[]) {
     return "No saved spots yet. Go to Home and save some Instagram links to build your itinerary.";
   }
 
-  // Group spots by city, but if city is missing, use country
-  const spotsByLocation: Record<string, Spot[]> = {};
+  // Group spots by city (fallback to country)
+  const groups: Record<string, Spot[]> = {};
   for (const spot of spots) {
     let location = spot.city?.trim();
     if (!location) location = spot.country?.trim() || "Other";
-    if (!spotsByLocation[location]) spotsByLocation[location] = [];
-    spotsByLocation[location].push(spot);
+    if (!groups[location]) groups[location] = [];
+    groups[location].push(spot);
   }
 
-  const locationSections = Object.entries(spotsByLocation)
+  // For each group, prepare the day data
+  const daysData = Object.entries(groups)
     .map(([location, locationSpots]) => {
       const spotsList = locationSpots
         .map((s, i) => {
-          const spotName = s.name?.trim() || "Unnamed spot";
-          const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(spotName + (location !== "Other" ? `, ${location}` : ""))}`;
-          return `${i + 1}. ${spotName}\n   Instagram: ${s.instagram_url}\n   Map link: ${mapUrl}`;
+          const name = s.name?.trim() || "Unnamed spot";
+          const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + (location !== "Other" ? `, ${location}` : ""))}`;
+          return `${i + 1}. ${name}\n   Instagram: ${s.instagram_url}\n   Map link: ${mapUrl}`;
         })
         .join("\n");
-      return `LOCATION: ${location}\n${spotsList}`;
+      return `DAY LOCATION: ${location}\n${spotsList}`;
     })
     .join("\n\n");
 
   const prompt = `
-You are Gojee, a solo‑travel planner. The user has saved these spots, grouped by location (city or country):
+You are Gojee, a solo‑travel planner. The user has saved spots grouped by location (city or country). Each "DAY LOCATION" block below must become a separate day. Do not merge or reorder spots.
 
-${locationSections}
+${daysData}
 
-Create a **day‑by‑day itinerary** for a solo traveller. Follow these rules exactly:
+For each day, create a simple itinerary with morning, afternoon, evening. Keep the spots in the same order as listed. Use only these emojis: ☀️ Morning, 🌤️ Afternoon, 🌙 Evening. Never mention prices, hours, or transport times. For each spot, include its Instagram and Google Maps links exactly as given.
 
-- **Each day MUST be for ONE location** (city or country). Start the day with "DAY X: [Location name]".
-- **NEVER mention prices, costs, opening hours, or transport times.** Use only ☀️ Morning, 🌤️ Afternoon, 🌙 Evening.
-- For each spot, include:
-  - A suggested time of day (morning/afternoon/evening) – no exact hour.
-  - The exact Instagram URL and Google Maps link (provided above).
-- You may add a very short note like "check local hours" or "popular spot" – but nothing specific.
-- Format:
+Format exactly like this (no extra text):
 
 DAY 1: [Location name]
 ☀️ Morning: Visit [Spot name]. Instagram: [url] Map: [url]
-🌤️ Afternoon: ...
+🌤️ Afternoon: Visit [next spot]. Instagram: [url] Map: [url]
 🌙 Evening: ...
-⚠️ Safety tip: (optional, generic)
 
-Do not add any extra commentary. No markdown, no asterisks.
+Do not add any commentary. No markdown, no asterisks.
 `;
 
   try {
@@ -68,13 +63,13 @@ Do not add any extra commentary. No markdown, no asterisks.
         {
           role: "system",
           content:
-            "You are a travel planner. Output plain text only – no markdown, no asterisks. Never invent specific facts about spots. Use the location names exactly as provided.",
+            "You are a travel planner. Output plain text only – no markdown, no asterisks. Never merge days or reorder spots. Use the exact URLs provided.",
         },
         { role: "user", content: prompt },
       ],
       model: "llama-3.3-70b-versatile",
       temperature: 0.3,
-      max_tokens: 1500,
+      max_tokens: 2000,
     });
 
     let content =
@@ -82,7 +77,6 @@ Do not add any extra commentary. No markdown, no asterisks.
       "Sorry, I couldn't generate an itinerary. Please try again.";
     content = content.replace(/\*/g, "").replace(/[�]/g, "");
     content = content.replace(/\b\d{1,2}:\d{2}\s*(AM|PM)?\b/gi, "");
-    // Also replace any leftover "unknown" (case insensitive) with "Japan" or a generic? Better to leave as is; the AI now uses country.
     return content;
   } catch (error) {
     console.error("Groq error:", error);
