@@ -16,35 +16,36 @@ export async function generateItinerary(spots: Spot[]) {
     return "No saved spots yet. Go to Home and save some Instagram links to build your itinerary.";
   }
 
-  // Group spots by city
-  const spotsByCity: Record<string, Spot[]> = {};
+  // Group spots by city, but if city is missing, use country
+  const spotsByLocation: Record<string, Spot[]> = {};
   for (const spot of spots) {
-    const city = spot.city?.trim() || "Unknown";
-    if (!spotsByCity[city]) spotsByCity[city] = [];
-    spotsByCity[city].push(spot);
+    let location = spot.city?.trim();
+    if (!location) location = spot.country?.trim() || "Other";
+    if (!spotsByLocation[location]) spotsByLocation[location] = [];
+    spotsByLocation[location].push(spot);
   }
 
-  const citySections = Object.entries(spotsByCity)
-    .map(([city, citySpots]) => {
-      const spotsList = citySpots
+  const locationSections = Object.entries(spotsByLocation)
+    .map(([location, locationSpots]) => {
+      const spotsList = locationSpots
         .map((s, i) => {
           const spotName = s.name?.trim() || "Unnamed spot";
-          const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(spotName + (city !== "Unknown" ? `, ${city}` : ""))}`;
+          const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(spotName + (location !== "Other" ? `, ${location}` : ""))}`;
           return `${i + 1}. ${spotName}\n   Instagram: ${s.instagram_url}\n   Map link: ${mapUrl}`;
         })
         .join("\n");
-      return `CITY: ${city}\n${spotsList}`;
+      return `LOCATION: ${location}\n${spotsList}`;
     })
     .join("\n\n");
 
   const prompt = `
-You are Gojee, a solo‑travel planner. The user has saved these spots, grouped by city:
+You are Gojee, a solo‑travel planner. The user has saved these spots, grouped by location (city or country):
 
-${citySections}
+${locationSections}
 
-Create a **simple day‑by‑day itinerary** for a solo traveller. Follow these rules exactly:
+Create a **day‑by‑day itinerary** for a solo traveller. Follow these rules exactly:
 
-- **Each day MUST be for ONE city**. Start the day with "DAY X: [City name]".
+- **Each day MUST be for ONE location** (city or country). Start the day with "DAY X: [Location name]".
 - **NEVER mention prices, costs, opening hours, or transport times.** Use only ☀️ Morning, 🌤️ Afternoon, 🌙 Evening.
 - For each spot, include:
   - A suggested time of day (morning/afternoon/evening) – no exact hour.
@@ -52,7 +53,7 @@ Create a **simple day‑by‑day itinerary** for a solo traveller. Follow these 
 - You may add a very short note like "check local hours" or "popular spot" – but nothing specific.
 - Format:
 
-DAY 1: Tokyo
+DAY 1: [Location name]
 ☀️ Morning: Visit [Spot name]. Instagram: [url] Map: [url]
 🌤️ Afternoon: ...
 🌙 Evening: ...
@@ -67,7 +68,7 @@ Do not add any extra commentary. No markdown, no asterisks.
         {
           role: "system",
           content:
-            "You are a travel planner. Output plain text only – no markdown, no asterisks. Never invent specific facts about spots.",
+            "You are a travel planner. Output plain text only – no markdown, no asterisks. Never invent specific facts about spots. Use the location names exactly as provided.",
         },
         { role: "user", content: prompt },
       ],
@@ -81,6 +82,7 @@ Do not add any extra commentary. No markdown, no asterisks.
       "Sorry, I couldn't generate an itinerary. Please try again.";
     content = content.replace(/\*/g, "").replace(/[�]/g, "");
     content = content.replace(/\b\d{1,2}:\d{2}\s*(AM|PM)?\b/gi, "");
+    // Also replace any leftover "unknown" (case insensitive) with "Japan" or a generic? Better to leave as is; the AI now uses country.
     return content;
   } catch (error) {
     console.error("Groq error:", error);
