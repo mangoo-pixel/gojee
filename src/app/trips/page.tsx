@@ -17,6 +17,33 @@ type Trip = {
   longitude?: number | null;
 };
 
+// Helper to get a city from the spot name if the city field is missing
+function getDisplayCity(spot: Trip): string | null {
+  if (spot.city?.trim()) return spot.city.trim();
+  const name = spot.name?.toLowerCase() || "";
+  const cityKeywords = [
+    "tokyo",
+    "kyoto",
+    "osaka",
+    "yokohama",
+    "nagoya",
+    "sapporo",
+    "fukuoka",
+    "kobe",
+    "nara",
+    "hiroshima",
+    "kanazawa",
+    "nikko",
+    "hakone",
+    "kamakura",
+  ];
+  for (const city of cityKeywords) {
+    if (name.includes(city))
+      return city.charAt(0).toUpperCase() + city.slice(1);
+  }
+  return null;
+}
+
 // Comprehensive country name → country code mapping (ISO 3166-1 alpha-2)
 const countryCodeMap: Record<string, string> = {
   "united states": "US",
@@ -362,6 +389,7 @@ export default function SavedSpotsPage() {
           <div className="s-cards">
             {filteredTrips.map((trip) => {
               const countryCode = getCountryCode(trip.country);
+              const displayCity = getDisplayCity(trip);
               return (
                 <div key={trip.id} className="s-card">
                   <div className="s-card-body" style={{ padding: "1rem" }}>
@@ -369,7 +397,7 @@ export default function SavedSpotsPage() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div className="s-card-name">
                           {trip.name ? trip.name.trim() : "Unnamed spot"}
-                          {trip.city && (
+                          {displayCity && (
                             <span
                               style={{
                                 marginLeft: "0.5rem",
@@ -378,7 +406,7 @@ export default function SavedSpotsPage() {
                                 color: "#8f7067",
                               }}
                             >
-                              📍 {trip.city}
+                              📍 {displayCity}
                             </span>
                           )}
                           {countryCode && (
