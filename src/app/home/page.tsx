@@ -8,17 +8,12 @@ import "../trips/trips2.css";
 export default function HomePage() {
   const pathname = usePathname();
   const [url, setUrl] = useState("");
-  const [name, setName] = useState("");
-  const [city, setCity] = useState("");
+  const [nameWithCity, setNameWithCity] = useState("");
   const [country, setCountry] = useState("");
   const [message, setMessage] = useState({ text: "", type: "" });
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isPending, startTransition] = useTransition();
   const [showChinaWarning, setShowChinaWarning] = useState(false);
-  const [toast, setToast] = useState<{ show: boolean; message: string }>({
-    show: false,
-    message: "",
-  });
 
   const extractFromInstagramUrl = (url: string): string | null => {
     const match = url.match(/instagram\.com\/p\/([A-Za-z0-9_-]+)/);
@@ -31,9 +26,9 @@ export default function HomePage() {
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newUrl = e.target.value;
     setUrl(newUrl);
-    if (!name && newUrl.includes("instagram.com")) {
+    if (!nameWithCity && newUrl.includes("instagram.com")) {
       const suggestedName = extractFromInstagramUrl(newUrl);
-      if (suggestedName) setName(suggestedName);
+      if (suggestedName) setNameWithCity(suggestedName);
     }
   };
 
@@ -51,22 +46,30 @@ export default function HomePage() {
     setMessage({ text: "", type: "" });
     startTransition(async () => {
       try {
+        // Parse name and city from the combined field
+        let rawName = nameWithCity.trim();
+        let city: string | null = null;
+        const lastComma = rawName.lastIndexOf(",");
+        if (lastComma !== -1) {
+          city = rawName.substring(lastComma + 1).trim();
+          rawName = rawName.substring(0, lastComma).trim();
+          if (city === "") city = null;
+        }
         const result = await saveTrip(
           url,
-          name || null,
-          city || null,
+          rawName || null,
+          city,
           country || null,
         );
         if (result.success) {
           const now = new Date();
           setLastSaved(now);
-          setToast({ show: true, message: "Spot saved! ✨" });
-          setTimeout(() => setToast({ show: false, message: "" }), 2500);
+          setMessage({ text: "✨ Just saved! ✨", type: "success" });
           setUrl("");
-          setName("");
-          setCity("");
+          setNameWithCity("");
           setCountry("");
           setShowChinaWarning(false);
+          setTimeout(() => setMessage({ text: "", type: "" }), 3000);
         } else {
           throw new Error("Save failed");
         }
@@ -138,20 +141,9 @@ export default function HomePage() {
             </span>
             <input
               type="text"
-              placeholder="Real spot name – helps the map find it (e.g., 'Tokyo Tower')"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-          <div className="s-search">
-            <span className="s-search-icon material-symbols-outlined">
-              location_city
-            </span>
-            <input
-              type="text"
-              placeholder="City (e.g., Tokyo, Kyoto) – helps group spots into days"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
+              placeholder="Spot name, City (e.g., 'Tokyo Tower, Tokyo')"
+              value={nameWithCity}
+              onChange={(e) => setNameWithCity(e.target.value)}
             />
           </div>
           <div className="s-search">
@@ -195,9 +187,13 @@ export default function HomePage() {
           <button type="submit" className="s-maps-btn" disabled={isPending}>
             {isPending ? "Saving..." : "Save spot"}
           </button>
-          {message.text && message.type !== "success" && (
+          {message.text && (
             <div
-              style={{ textAlign: "center", marginTop: "0.5rem", color: "red" }}
+              style={{
+                textAlign: "center",
+                marginTop: "0.5rem",
+                color: message.type === "success" ? "green" : "red",
+              }}
             >
               {message.text}
             </div>
@@ -216,30 +212,6 @@ export default function HomePage() {
           )}
         </form>
       </div>
-
-      {/* Sleek toast notification */}
-      {toast.show && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: "24px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            backgroundColor: "#1a1c1b",
-            color: "white",
-            padding: "8px 20px",
-            borderRadius: "40px",
-            fontSize: "14px",
-            fontWeight: 500,
-            zIndex: 1000,
-            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-            backdropFilter: "blur(4px)",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {toast.message}
-        </div>
-      )}
 
       <nav className="s-nav">
         <a
