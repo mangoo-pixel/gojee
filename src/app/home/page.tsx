@@ -8,7 +8,7 @@ import "../trips/trips2.css";
 export default function HomePage() {
   const pathname = usePathname();
   const [url, setUrl] = useState("");
-  const [nameWithCity, setNameWithCity] = useState("");
+  const [name, setName] = useState("");
   const [country, setCountry] = useState("");
   const [message, setMessage] = useState({ text: "", type: "" });
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -26,9 +26,9 @@ export default function HomePage() {
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newUrl = e.target.value;
     setUrl(newUrl);
-    if (!nameWithCity && newUrl.includes("instagram.com")) {
+    if (!name && newUrl.includes("instagram.com")) {
       const suggestedName = extractFromInstagramUrl(newUrl);
-      if (suggestedName) setNameWithCity(suggestedName);
+      if (suggestedName) setName(suggestedName);
     }
   };
 
@@ -46,28 +46,13 @@ export default function HomePage() {
     setMessage({ text: "", type: "" });
     startTransition(async () => {
       try {
-        let rawName = nameWithCity.trim();
-        let city: string | null = null;
-        const lastComma = rawName.lastIndexOf(",");
-        if (lastComma !== -1) {
-          const afterComma = rawName.substring(lastComma + 1).trim();
-          if (afterComma) {
-            city = afterComma;
-            rawName = rawName.substring(0, lastComma).trim();
-          }
-        }
-        const result = await saveTrip(
-          url,
-          rawName || null,
-          city,
-          country || null,
-        );
+        const result = await saveTrip(url, name || null, country || null);
         if (result.success) {
           const now = new Date();
           setLastSaved(now);
           setMessage({ text: "✨ Just saved! ✨", type: "success" });
           setUrl("");
-          setNameWithCity("");
+          setName("");
           setCountry("");
           setShowChinaWarning(false);
           setTimeout(() => setMessage({ text: "", type: "" }), 3000);
@@ -142,9 +127,9 @@ export default function HomePage() {
             </span>
             <input
               type="text"
-              placeholder="Spot name, City (e.g., 'Tokyo Tower, Tokyo')"
-              value={nameWithCity}
-              onChange={(e) => setNameWithCity(e.target.value)}
+              placeholder="Spot name (e.g., 'Torinanba')"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
             />
           </div>
           <div className="s-search">
