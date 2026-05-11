@@ -46,14 +46,15 @@ export default function HomePage() {
     setMessage({ text: "", type: "" });
     startTransition(async () => {
       try {
-        // Parse name and city from the combined field
         let rawName = nameWithCity.trim();
         let city: string | null = null;
         const lastComma = rawName.lastIndexOf(",");
         if (lastComma !== -1) {
-          city = rawName.substring(lastComma + 1).trim();
-          rawName = rawName.substring(0, lastComma).trim();
-          if (city === "") city = null;
+          const afterComma = rawName.substring(lastComma + 1).trim();
+          if (afterComma) {
+            city = afterComma;
+            rawName = rawName.substring(0, lastComma).trim();
+          }
         }
         const result = await saveTrip(
           url,

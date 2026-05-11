@@ -3,7 +3,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-// Geocode and return { lat, lng, city }
 async function geocodeLocationAndCity(
   spotName: string,
   country: string | null,
@@ -39,7 +38,7 @@ async function geocodeLocationAndCity(
 export async function saveTrip(
   instagramUrl: string,
   name: string | null,
-  userCity: string | null,
+  city: string | null,
   country: string | null,
 ) {
   if (!instagramUrl) throw new Error("Instagram URL is required");
@@ -64,7 +63,6 @@ export async function saveTrip(
     },
   );
 
-  // Get authenticated user
   const {
     data: { user },
     error: userError,
@@ -72,9 +70,9 @@ export async function saveTrip(
   if (userError || !user)
     throw new Error("You must be logged in to save spots");
 
-  // Geocode and get city
+  // Geocode to get lat/lng and possibly a city (if user didn't provide one)
   const geo = await geocodeLocationAndCity(name || instagramUrl, country);
-  const finalCity = userCity?.trim() || geo?.city || country || null;
+  const finalCity = city?.trim() || geo?.city || country || null;
 
   const { error } = await supabase.from("trips").insert({
     instagram_url: instagramUrl,
