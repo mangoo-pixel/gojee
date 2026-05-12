@@ -34,7 +34,7 @@ export async function GET(request: Request) {
     const { data, error } = await supabase
       .from("trips")
       .select(
-        "id, name, instagram_url, created_at, country, latitude, longitude",
+        "id, name, city, instagram_url, created_at, country, latitude, longitude",
       )
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
