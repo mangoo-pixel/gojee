@@ -3,6 +3,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
+// Geocode and return coordinates + city
 async function geocodeAndGetCity(
   spotName: string,
   country: string | null,
@@ -12,29 +13,31 @@ async function geocodeAndGetCity(
 
   const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&addressdetails=1`;
   try {
-    const res = await fetch(url, {
-      headers: { "User-Agent": "GojeeApp/1.0" },
-    });
+    const res = await fetch(url, { headers: { "User-Agent": "GojeeApp/1.0" } });
     const data = await res.json();
     if (data && data[0]) {
       const lat = parseFloat(data[0].lat);
       const lng = parseFloat(data[0].lon);
       let city: string | null = null;
       if (data[0].address) {
-        city =
+        let rawCity =
           data[0].address.city ||
           data[0].address.town ||
-          data[0].address.village ||
-          null;
+          data[0].address.village;
+        // Filter out Japanese wards (ends with 区)
+        if (rawCity && rawCity.match(/[区]$/)) {
+          city = data[0].address.state || data[0].address.country;
+        } else {
+          city = rawCity;
+        }
       }
       return { lat, lng, city };
     }
-  } catch (err) {
-    console.error("Geocoding failed:", err);
-  }
+  } catch (err) {}
   return null;
 }
 
+// Save a new trip
 export async function saveTrip(
   instagramUrl: string,
   name: string | null,
@@ -58,6 +61,7 @@ export async function saveTrip(
     },
   );
 
+  // Get user
   const {
     data: { user },
     error: userError,
@@ -65,6 +69,7 @@ export async function saveTrip(
   if (userError || !user)
     throw new Error("You must be logged in to save spots");
 
+  // Geocode to get lat/lng and city
   const geo = await geocodeAndGetCity(name || instagramUrl, country);
 
   const { error } = await supabase.from("trips").insert({

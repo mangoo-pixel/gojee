@@ -17,7 +17,17 @@ type Trip = {
   longitude?: number | null;
 };
 
-// Comprehensive country name → country code mapping
+// Extract the spot name before the first comma
+function cleanName(fullName: string | null): string {
+  if (!fullName) return "Unnamed spot";
+  const firstComma = fullName.indexOf(",");
+  if (firstComma !== -1) {
+    return fullName.substring(0, firstComma).trim();
+  }
+  return fullName.trim();
+}
+
+// Country code mapping (keep your existing map)
 const countryCodeMap: Record<string, string> = {
   "united states": "US",
   usa: "US",
@@ -183,18 +193,19 @@ export default function SavedSpotsPage() {
     const abortController = new AbortController();
     const fetchTrips = async () => {
       try {
-        const res = await fetch("/api/recent-trips?limit=100", {
+        const response = await fetch("/api/recent-trips?limit=100", {
           signal: abortController.signal,
         });
-        if (res.status === 401) {
+        if (response.status === 401) {
           setError("Please log in to view your saved spots.");
           setLoading(false);
           return;
         }
-        if (!res.ok) throw new Error("Failed to fetch");
-        const data = await res.json();
+        if (!response.ok) throw new Error("Failed to fetch");
+        const data = await response.json();
         setTrips(data.trips || []);
         setFilteredTrips(data.trips || []);
+        setError(null);
       } catch (err) {
         if (err instanceof Error && err.name !== "AbortError") {
           setError("Unable to load your spots. Please refresh the page.");
@@ -261,7 +272,7 @@ export default function SavedSpotsPage() {
   }, [deleteId]);
 
   const getMapsLink = (trip: Trip) => {
-    let query = trip.name ? trip.name.trim() : "";
+    let query = cleanName(trip.name);
     if (trip.country) {
       query += `, ${trip.country}`;
     }
@@ -379,13 +390,14 @@ export default function SavedSpotsPage() {
           <div className="s-cards">
             {filteredTrips.map((trip) => {
               const countryCode = getCountryCode(trip.country);
+              const displayName = cleanName(trip.name);
               return (
                 <div key={trip.id} className="s-card">
                   <div className="s-card-body" style={{ padding: "1rem" }}>
                     <div className="s-card-top">
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div className="s-card-name">
-                          {trip.name ? trip.name.trim() : "Unnamed spot"}
+                          {displayName}
                           {trip.city && (
                             <span
                               style={{
@@ -399,30 +411,17 @@ export default function SavedSpotsPage() {
                             </span>
                           )}
                           {countryCode && (
-                            <span
-                              style={{ marginLeft: "0.5rem", fontSize: "14px" }}
-                            >
-                              <ReactCountryFlag
-                                countryCode={countryCode}
-                                svg
-                                style={{
-                                  width: "1em",
-                                  height: "1em",
-                                  marginRight: "0.3em",
-                                  verticalAlign: "middle",
-                                }}
-                                title={trip.country || ""}
-                              />
-                              <span
-                                style={{
-                                  fontSize: "12px",
-                                  fontWeight: "normal",
-                                  color: "#5b4039",
-                                }}
-                              >
-                                {trip.country}
-                              </span>
-                            </span>
+                            <ReactCountryFlag
+                              countryCode={countryCode}
+                              svg
+                              style={{
+                                width: "1em",
+                                height: "1em",
+                                marginLeft: "0.5rem",
+                                verticalAlign: "middle",
+                              }}
+                              title={trip.country || ""}
+                            />
                           )}
                           {!countryCode && trip.country && (
                             <span
@@ -460,6 +459,7 @@ export default function SavedSpotsPage() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="s-maps-btn"
+                        aria-label="Open in Google Maps"
                       >
                         Open Maps
                       </a>
@@ -468,12 +468,15 @@ export default function SavedSpotsPage() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="s-maps-btn"
+                        aria-label="Open Instagram post"
                       >
                         Instagram
                       </a>
                       <button
                         onClick={() => setDeleteId(trip.id)}
                         className="s-delete-btn"
+                        title="Delete spot"
+                        aria-label="Delete spot"
                         disabled={isDeleting}
                       >
                         🗑️
