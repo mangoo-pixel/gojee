@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import ReactMarkdown from "react-markdown";
 import "@/app/trips/trips2.css";
 
 type Trip = {
@@ -42,12 +43,51 @@ function formatDistance(distKm: number): string {
   return `${distKm.toFixed(1)} km`;
 }
 
+async function generateAIPlan(spots: Trip[]): Promise<string> {
+  if (spots.length === 0)
+    return "No spots saved yet. Go to Home and save some Instagram links.";
+  const spotsList = spots
+    .map(
+      (s) =>
+        `- ${s.name || "Unnamed spot"} (${s.city || s.country || "Unknown location"})`,
+    )
+    .join("\n");
+  const prompt = `
+You are Gojee, a solo‑travel planner. The user has saved these spots:
+${spotsList}
+
+Create a short, friendly day‑by‑day itinerary for a solo traveller. Group spots by city if possible.
+NEVER mention prices, opening hours, walking times, or distances.
+Use only ☀️ morning, 🌤️ afternoon, 🌙 evening.
+Keep each day short (2-3 lines). Format as:
+
+## Day 1: Tokyo
+☀️ Morning: ...
+🌤️ Afternoon: ...
+🌙 Evening: ...
+💡 Tip: (optional safety or local custom)
+`;
+  try {
+    const res = await fetch("/api/ai-trip-plan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt }),
+    });
+    const data = await res.json();
+    return data.plan || "✨ Plan your trip by reordering spots below!";
+  } catch {
+    return "✨ Use the 'Reorder by proximity' button to plan your route.";
+  }
+}
+
 export default function MyTripPage() {
   const pathname = usePathname();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [orderChanged, setOrderChanged] = useState(false);
+  const [aiPlan, setAiPlan] = useState<string>("");
+  const [generatingPlan, setGeneratingPlan] = useState(false);
 
   useEffect(() => {
     fetch("/api/recent-trips?limit=100")
@@ -86,6 +126,13 @@ export default function MyTripPage() {
     }
     setTrips(sorted);
     setOrderChanged(true);
+  };
+
+  const generateAIPlanHandler = async () => {
+    setGeneratingPlan(true);
+    const plan = await generateAIPlan(trips);
+    setAiPlan(plan);
+    setGeneratingPlan(false);
   };
 
   const groups: Record<string, Trip[]> = {};
@@ -167,32 +214,116 @@ export default function MyTripPage() {
           </p>
         </div>
 
-        <div style={{ marginBottom: "1rem" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "0.75rem",
+            marginBottom: "1rem",
+            flexWrap: "wrap",
+          }}
+        >
           <button
             onClick={reorderByProximity}
             className="s-maps-btn"
             style={{
               background: "#ff5a26",
               color: "white",
-              width: "100%",
-              padding: "0.5rem",
+              padding: "0.5rem 1rem",
+              flex: 1,
             }}
           >
             🔄 Reorder by proximity (walking distance)
           </button>
-          {orderChanged && (
-            <p
-              style={{
-                fontSize: "0.7rem",
-                marginTop: "0.25rem",
-                textAlign: "center",
-              }}
-            >
-              Order updated based on straight‑line distance.
-            </p>
-          )}
+          <button
+            onClick={generateAIPlanHandler}
+            disabled={generatingPlan}
+            className="s-maps-btn"
+            style={{
+              background: "#ffb38e",
+              color: "#3d2c27",
+              padding: "0.5rem 1rem",
+              flex: 1,
+            }}
+          >
+            {generatingPlan ? "⏳ Planning..." : "✨ Generate AI itinerary"}
+          </button>
         </div>
 
+        {orderChanged && (
+          <p
+            style={{
+              fontSize: "0.7rem",
+              marginBottom: "1rem",
+              textAlign: "center",
+            }}
+          >
+            Order updated based on straight‑line distance.
+          </p>
+        )}
+
+        {/* AI Generated Itinerary */}
+        {aiPlan && (
+          <div
+            className="s-card"
+            style={{
+              padding: "1rem",
+              marginBottom: "1.5rem",
+              background: "linear-gradient(145deg, #fff, #faf9f7)",
+            }}
+          >
+            <h3
+              style={{
+                fontSize: "1.2rem",
+                fontWeight: 700,
+                marginBottom: "0.5rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+              }}
+            >
+              <span
+                className="material-symbols-outlined"
+                style={{ color: "#ff5a26" }}
+              >
+                auto_awesome
+              </span>
+              AI‑suggested plan
+            </h3>
+            <div style={{ fontSize: "0.95rem", lineHeight: 1.5 }}>
+              <ReactMarkdown
+                components={{
+                  h2: ({ children }) => (
+                    <h2
+                      style={{
+                        fontSize: "1.2rem",
+                        fontWeight: 700,
+                        marginTop: "1rem",
+                        marginBottom: "0.5rem",
+                        color: "#ff5a26",
+                        borderLeft: "4px solid #ff5a26",
+                        paddingLeft: "0.5rem",
+                      }}
+                    >
+                      {children}
+                    </h2>
+                  ),
+                  p: ({ children }) => (
+                    <p style={{ margin: "0.5rem 0" }}>{children}</p>
+                  ),
+                  ul: ({ children }) => (
+                    <ul style={{ paddingLeft: "1.5rem", margin: "0.5rem 0" }}>
+                      {children}
+                    </ul>
+                  ),
+                }}
+              >
+                {aiPlan}
+              </ReactMarkdown>
+            </div>
+          </div>
+        )}
+
+        {/* Deterministic grouping with distances */}
         {Object.entries(groups).map(([location, locationSpots]) => (
           <div
             key={location}
