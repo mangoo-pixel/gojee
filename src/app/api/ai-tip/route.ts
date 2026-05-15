@@ -12,10 +12,13 @@ export async function POST(request: Request) {
       temperature: 0.5,
       max_tokens: 60,
     });
-    const tip = completion.choices[0]?.message?.content?.trim() || "✨ Enjoy your visit!";
+    const tip =
+      completion.choices[0]?.message?.content?.trim() || "✨ Enjoy your visit!";
     return NextResponse.json({ tip });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ tip: "✨ Ask a local for their recommendation!" });
+    return NextResponse.json({
+      tip: "✨ Ask a local for their recommendation!",
+    });
   }
 }
