@@ -20,7 +20,7 @@ type Trip = {
 // Clean name (remove trailing city)
 function cleanName(fullName: string | null): string {
   if (!fullName) return "Unnamed spot";
-  const idx = fullName.indexOf(',');
+  const idx = fullName.indexOf(",");
   return idx !== -1 ? fullName.substring(0, idx).trim() : fullName.trim();
 }
 
@@ -31,10 +31,14 @@ function getDisplayLocation(trip: Trip): string {
   return parts.join(", ");
 }
 
-// Country code map (keep your existing one – I've trimmed for brevity, but you must keep your full map)
+// Country code map (keep your full map – this is a shortened version, replace with yours)
 const countryCodeMap: Record<string, string> = {
-  japan: "JP", "united states": "US", usa: "US", "united kingdom": "GB", uk: "GB",
-  // ... (keep your full map)
+  japan: "JP",
+  "united states": "US",
+  usa: "US",
+  "united kingdom": "GB",
+  uk: "GB",
+  // ... (paste your full map here)
   taiwan: "TW",
 };
 function getCountryCode(country: string | null): string | null {
@@ -46,15 +50,25 @@ function getCountryCode(country: string | null): string | null {
 function formatDate(dateString: string | null): string {
   if (!dateString) return "";
   const date = new Date(dateString);
-  return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+  return date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  });
 }
 
 function getMapsLink(trip: Trip): string {
-  const query = encodeURIComponent(cleanName(trip.name) + (trip.country ? `, ${trip.country}` : ""));
+  const query = encodeURIComponent(
+    cleanName(trip.name) + (trip.country ? `, ${trip.country}` : ""),
+  );
   return `https://www.google.com/maps/search/?api=1&query=${query}`;
 }
 
-async function fetchAITip(spotName: string, city: string | null, country: string | null): Promise<string> {
+async function fetchAITip(
+  spotName: string,
+  city: string | null,
+  country: string | null,
+): Promise<string> {
   const location = city || country || "this area";
   const prompt = `Give a very short, helpful tip (max 15 words) for a solo traveller visiting "${spotName}" in ${location}. The tip can be about a hidden gem, a local custom, or a safety note. Never mention prices, opening hours, walking times, or distances. Keep it positive and practical.`;
   try {
@@ -87,7 +101,9 @@ export default function SavedSpotsPage() {
     const abortController = new AbortController();
     const fetchTrips = async () => {
       try {
-        const res = await fetch("/api/recent-trips?limit=100", { signal: abortController.signal });
+        const res = await fetch("/api/recent-trips?limit=100", {
+          signal: abortController.signal,
+        });
         if (res.status === 401) {
           setError("Please log in to view your saved spots.");
           setLoading(false);
@@ -113,11 +129,14 @@ export default function SavedSpotsPage() {
     const query = searchQuery.toLowerCase().trim();
     if (!query) setFilteredTrips(trips);
     else {
-      setFilteredTrips(trips.filter(trip =>
-        (trip.name && trip.name.toLowerCase().includes(query)) ||
-        (trip.city && trip.city.toLowerCase().includes(query)) ||
-        (trip.country && trip.country.toLowerCase().includes(query))
-      ));
+      setFilteredTrips(
+        trips.filter(
+          (trip) =>
+            (trip.name && trip.name.toLowerCase().includes(query)) ||
+            (trip.city && trip.city.toLowerCase().includes(query)) ||
+            (trip.country && trip.country.toLowerCase().includes(query)),
+        ),
+      );
     }
   }, [searchQuery, trips]);
 
@@ -126,8 +145,8 @@ export default function SavedSpotsPage() {
     setIsDeleting(true);
     try {
       await deleteTripAction(deleteId);
-      setTrips(prev => prev.filter(t => t.id !== deleteId));
-      setFilteredTrips(prev => prev.filter(t => t.id !== deleteId));
+      setTrips((prev) => prev.filter((t) => t.id !== deleteId));
+      setFilteredTrips((prev) => prev.filter((t) => t.id !== deleteId));
     } catch (e) {
       alert("Failed to delete. Try again.");
     } finally {
@@ -151,71 +170,248 @@ export default function SavedSpotsPage() {
     } else {
       document.body.style.overflow = "";
     }
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [deleteId]);
 
-  const handleGetTip = async (spotId: string, spotName: string, city: string | null, country: string | null) => {
+  const handleGetTip = async (
+    spotId: string,
+    spotName: string,
+    city: string | null,
+    country: string | null,
+  ) => {
     if (tips[spotId] || loadingTips[spotId]) return;
-    setLoadingTips(prev => ({ ...prev, [spotId]: true }));
+    setLoadingTips((prev) => ({ ...prev, [spotId]: true }));
     const tip = await fetchAITip(spotName, city, country);
-    setTips(prev => ({ ...prev, [spotId]: tip }));
-    setLoadingTips(prev => ({ ...prev, [spotId]: false }));
+    setTips((prev) => ({ ...prev, [spotId]: tip }));
+    setLoadingTips((prev) => ({ ...prev, [spotId]: false }));
   };
 
   return (
     <div className="s-app">
-      {/* topbar unchanged */}
-      <div className="s-topbar">...</div>
+      <div className="s-topbar">
+        <div className="s-topbar-left">
+          <div className="s-avatar">
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: 22, color: "#ff5a26" }}
+            >
+              explore
+            </span>
+          </div>
+          <span className="s-brand">Gojee</span>
+        </div>
+        <div className="s-topbar-right">
+          <button className="s-icon-btn" aria-label="Notifications">
+            <span className="material-symbols-outlined">notifications</span>
+          </button>
+          <button className="s-icon-btn" aria-label="Settings">
+            <span className="material-symbols-outlined">settings</span>
+          </button>
+        </div>
+      </div>
 
       <div className="s-content">
         <div className="s-hero">
           <h1>Saved Spots</h1>
-          <span className="s-count-badge">{filteredTrips.length} saved</span>
+          <span className="s-count-badge">
+            {filteredTrips.length} {filteredTrips.length === 1 ? "gem" : "gems"}{" "}
+            saved
+          </span>
         </div>
 
         <div className="s-search">
-          <span className="s-search-icon">search</span>
-          <input type="text" placeholder="Search name, city, or country..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+          <span className="s-search-icon material-symbols-outlined">
+            search
+          </span>
+          <input
+            type="text"
+            placeholder="Search name, city, or country..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
 
-        {loading && <div className="s-empty"><p>Loading...</p></div>}
-        {error && <div className="s-empty"><p>{error}</p></div>}
-        {!loading && !error && filteredTrips.length === 0 && <div className="s-empty"><p>No spots saved yet.</p></div>}
+        {loading && (
+          <div className="s-empty">
+            <p>Loading your spots...</p>
+          </div>
+        )}
+        {error && (
+          <div className="s-empty">
+            <span className="s-empty-icon">error</span>
+            <h2>Something went wrong</h2>
+            <p>{error}</p>
+            {error.includes("log in") ? (
+              <a href="/login" className="s-empty-link">
+                Log in
+              </a>
+            ) : (
+              <button
+                onClick={() => window.location.reload()}
+                className="s-empty-link"
+              >
+                Try again
+              </button>
+            )}
+          </div>
+        )}
+        {!loading && !error && filteredTrips.length === 0 && (
+          <div className="s-empty">
+            <span className="s-empty-icon">explore_off</span>
+            <h2>No spots saved yet</h2>
+            <a href="/" className="s-empty-link">
+              Save your first spot
+            </a>
+          </div>
+        )}
 
         {!loading && !error && filteredTrips.length > 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-            {filteredTrips.map(trip => {
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+          >
+            {filteredTrips.map((trip) => {
               const location = getDisplayLocation(trip);
               const displayName = cleanName(trip.name);
               const countryCode = getCountryCode(trip.country);
               const tip = tips[trip.id];
               const loadingTip = loadingTips[trip.id];
               return (
-                <div key={trip.id} className="s-card" style={{ padding: "0.75rem 1rem", borderRadius: "16px" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
+                <div
+                  key={trip.id}
+                  className="s-card"
+                  style={{ padding: "0.75rem 1rem", borderRadius: "16px" }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      flexWrap: "wrap",
+                      gap: "0.5rem",
+                    }}
+                  >
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 600, marginBottom: "0.2rem" }}>
                         {displayName}
-                        {location && <span style={{ fontSize: "0.85rem", fontWeight: "normal", color: "#5b4039", marginLeft: "0.5rem" }}>– {location}</span>}
-                        {countryCode && <ReactCountryFlag countryCode={countryCode} svg style={{ width: "1.2em", height: "1.2em", marginLeft: "0.5rem", verticalAlign: "middle" }} title={trip.country || ""} />}
+                        {location && (
+                          <span
+                            style={{
+                              fontSize: "0.85rem",
+                              fontWeight: "normal",
+                              color: "#5b4039",
+                              marginLeft: "0.5rem",
+                            }}
+                          >
+                            – {location}
+                          </span>
+                        )}
+                        {countryCode && (
+                          <ReactCountryFlag
+                            countryCode={countryCode}
+                            svg
+                            style={{
+                              width: "1.2em",
+                              height: "1.2em",
+                              marginLeft: "0.5rem",
+                              verticalAlign: "middle",
+                            }}
+                            title={trip.country || ""}
+                          />
+                        )}
                       </div>
-                      <div style={{ fontSize: "0.7rem", color: "#8f7067" }}>Saved {formatDate(trip.created_at)}</div>
-                      {tip && <div style={{ fontSize: "0.75rem", marginTop: "0.25rem", background: "#f0eeec", padding: "0.25rem 0.5rem", borderRadius: "12px", display: "inline-block" }}>✨ {tip}</div>}
+                      <div style={{ fontSize: "0.7rem", color: "#8f7067" }}>
+                        Saved {formatDate(trip.created_at)}
+                      </div>
+                      {tip && (
+                        <div
+                          style={{
+                            fontSize: "0.75rem",
+                            marginTop: "0.25rem",
+                            background: "#f0eeec",
+                            padding: "0.25rem 0.5rem",
+                            borderRadius: "12px",
+                            display: "inline-block",
+                          }}
+                        >
+                          ✨ {tip}
+                        </div>
+                      )}
                     </div>
-                    <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                      <a href={getMapsLink(trip)} target="_blank" rel="noopener noreferrer" className="s-maps-btn" style={{ padding: "0.25rem 0.75rem", fontSize: "0.75rem", background: "#f0eeec", color: "#1a1c1b" }}>Maps</a>
-                      <a href={trip.instagram_url} target="_blank" rel="noopener noreferrer" className="s-maps-btn" style={{ padding: "0.25rem 0.75rem", fontSize: "0.75rem", background: "#ffb38e", color: "#3d2c27" }}>IG</a>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "0.5rem",
+                        alignItems: "center",
+                      }}
+                    >
+                      <a
+                        href={getMapsLink(trip)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="s-maps-btn"
+                        style={{
+                          padding: "0.25rem 0.75rem",
+                          fontSize: "0.75rem",
+                          background: "#f0eeec",
+                          color: "#1a1c1b",
+                        }}
+                      >
+                        Maps
+                      </a>
+                      <a
+                        href={trip.instagram_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="s-maps-btn"
+                        style={{
+                          padding: "0.25rem 0.75rem",
+                          fontSize: "0.75rem",
+                          background: "#ffb38e",
+                          color: "#3d2c27",
+                        }}
+                      >
+                        IG
+                      </a>
                       <button
-                        onClick={() => handleGetTip(trip.id, displayName, trip.city, trip.country)}
+                        onClick={() =>
+                          handleGetTip(
+                            trip.id,
+                            displayName,
+                            trip.city,
+                            trip.country,
+                          )
+                        }
                         disabled={!!tip || loadingTip}
                         className="s-icon-btn"
-                        style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.2rem", padding: "0.25rem", color: "#ff5a26" }}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          fontSize: "1.2rem",
+                          padding: "0.25rem",
+                          color: "#ff5a26",
+                        }}
                         title="Get a friendly tip"
                       >
                         {loadingTip ? "⏳" : tip ? "✅" : "✨"}
                       </button>
-                      <button onClick={() => setDeleteId(trip.id)} className="s-delete-btn" style={{ background: "none", border: "none", cursor: "pointer", color: "#8f7067", padding: "0.25rem" }} disabled={isDeleting}>
-                        <span className="material-symbols-outlined">delete</span>
+                      <button
+                        onClick={() => setDeleteId(trip.id)}
+                        className="s-delete-btn"
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          color: "#8f7067",
+                          padding: "0.25rem",
+                        }}
+                        disabled={isDeleting}
+                      >
+                        <span className="material-symbols-outlined">
+                          delete
+                        </span>
                       </button>
                     </div>
                   </div>
@@ -226,9 +422,68 @@ export default function SavedSpotsPage() {
         )}
       </div>
 
-      {deleteId && ( ... )} {/* delete modal unchanged */}
+      {deleteId && (
+        <div
+          className="s-modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-title"
+        >
+          <div className="s-modal">
+            <h3 id="modal-title">Remove this spot?</h3>
+            <p>You can always add it again later.</p>
+            <div className="s-modal-actions">
+              <button
+                ref={cancelButtonRef}
+                className="s-btn-secondary"
+                onClick={() => setDeleteId(null)}
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                className="s-btn-danger"
+                onClick={handleDeleteConfirmed}
+                disabled={isDeleting}
+              >
+                {isDeleting ? "Removing..." : "Remove"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-      <nav className="s-nav">...</nav>
+      <nav className="s-nav">
+        <a
+          href="/home"
+          className={`s-nav-item ${pathname === "/home" ? "active" : ""}`}
+        >
+          <span className="s-nav-icon">🏠</span>
+          <span>Home</span>
+        </a>
+        <a
+          href="/trips"
+          className={`s-nav-item ${pathname === "/trips" ? "active" : ""}`}
+        >
+          <span className="s-nav-icon">🔖</span>
+          <span>Saved</span>
+        </a>
+        <a
+          href="/my-trip"
+          className={`s-nav-item ${pathname === "/my-trip" ? "active" : ""}`}
+        >
+          <span className="s-nav-icon">✈️</span>
+          <span>My Trip</span>
+        </a>
+        <a href="/safe-help" className="s-nav-item">
+          <span className="s-nav-icon">🛡️</span>
+          <span>Safety</span>
+        </a>
+        <a href="/profile" className="s-nav-item">
+          <span className="s-nav-icon">👤</span>
+          <span>Profile</span>
+        </a>
+      </nav>
     </div>
   );
 }
