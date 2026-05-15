@@ -15,88 +15,31 @@ type Trip = {
   longitude: number | null;
 };
 
-// List of major Japanese cities (extend as needed)
-const cityKeywords = [
-  "tokyo",
-  "kyoto",
-  "osaka",
-  "yokohama",
-  "nagoya",
-  "sapporo",
-  "fukuoka",
-  "kobe",
-  "nara",
-  "hiroshima",
-  "kanazawa",
-  "nikko",
-  "hakone",
-  "kamakura",
-];
-
-function getSpotLocation(spot: Trip): string {
-  if (spot.city?.trim()) return spot.city.trim();
-  const name = spot.name?.toLowerCase() || "";
-  for (const city of cityKeywords) {
-    if (name.includes(city))
-      return city.charAt(0).toUpperCase() + city.slice(1);
-  }
-  return spot.country?.trim() || "Other";
+function getLocationKey(trip: Trip): string {
+  return trip.city?.trim() || trip.country?.trim() || "Other";
 }
 
-// Helper: get icon and time hint based on spot name
-function getSpotMetadata(name: string | null) {
-  const lowerName = (name || "").toLowerCase();
-  if (
-    lowerName.includes("cafe") ||
-    lowerName.includes("coffee") ||
-    lowerName.includes("matcha")
-  )
-    return { icon: "☕", timeHint: "🌅 Morning" };
-  if (
-    lowerName.includes("restaurant") ||
-    lowerName.includes("bistro") ||
-    lowerName.includes("izakaya")
-  )
-    return { icon: "🍽️", timeHint: "🌤️ Afternoon / Evening" };
-  if (
-    lowerName.includes("bar") ||
-    lowerName.includes("brewery") ||
-    lowerName.includes("pub")
-  )
-    return { icon: "🍺", timeHint: "🌙 Evening" };
-  if (
-    lowerName.includes("view") ||
-    lowerName.includes("observatory") ||
-    lowerName.includes("garden")
-  )
-    return { icon: "🏞️", timeHint: "🌅 Morning / 🌇 Sunset" };
-  if (
-    lowerName.includes("temple") ||
-    lowerName.includes("shrine") ||
-    lowerName.includes("museum")
-  )
-    return { icon: "🏛️", timeHint: "🌅 Morning" };
-  return { icon: "📍", timeHint: "🕒 Flexible" };
+function getDistance(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number,
+): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// Fetch a safe AI tip for a single spot
-async function fetchSpotTip(
-  spotName: string,
-  location: string,
-): Promise<string> {
-  const prompt = `Give a very short, helpful tip (max 15 words) for a solo traveller visiting "${spotName}" in ${location}. The tip can be about safety, a local custom, or something to try. Never mention prices, opening hours, walking times, or distances. Keep it positive and practical. Example: "Try the matcha latte – it's a local favourite."`;
-  try {
-    const res = await fetch("/api/ai-tip", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt }),
-    });
-    const data = await res.json();
-    return data.tip || "✨ Ask a local for their favourite dish!";
-  } catch (err) {
-    console.error(err);
-    return "✨ Look for the daily special!";
-  }
+function formatDistance(distKm: number): string {
+  if (distKm < 0.1) return "very close";
+  if (distKm < 1) return `${Math.round(distKm * 1000)} m`;
+  return `${distKm.toFixed(1)} km`;
 }
 
 export default function MyTripPage() {
@@ -104,44 +47,74 @@ export default function MyTripPage() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [tips, setTips] = useState<Record<string, string>>({});
-  const [loadingTips, setLoadingTips] = useState<Record<string, boolean>>({});
+  const [orderChanged, setOrderChanged] = useState(false);
 
   useEffect(() => {
-    const fetchTrips = async () => {
-      try {
-        const res = await fetch("/api/recent-trips?limit=100");
-        if (!res.ok) throw new Error("Failed to fetch");
-        const data = await res.json();
-        setTrips(data.trips || []);
-      } catch (err) {
-        setError("Could not load your saved spots.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchTrips();
+    fetch("/api/recent-trips?limit=100")
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => setTrips(data.trips || []))
+      .catch(() => setError("Could not load spots."))
+      .finally(() => setLoading(false));
   }, []);
 
-  // Group by derived location (city or from name)
-  const grouped: Record<string, Trip[]> = {};
+  const reorderByProximity = () => {
+    if (trips.length < 2) return;
+    const withCoords = trips.filter((t) => t.latitude && t.longitude);
+    if (withCoords.length < 2) return;
+    const sorted = [...withCoords];
+    for (let i = 0; i < sorted.length - 1; i++) {
+      let minIdx = i + 1;
+      let minDist = getDistance(
+        sorted[i].latitude!,
+        sorted[i].longitude!,
+        sorted[minIdx].latitude!,
+        sorted[minIdx].longitude!,
+      );
+      for (let j = i + 2; j < sorted.length; j++) {
+        const dist = getDistance(
+          sorted[i].latitude!,
+          sorted[i].longitude!,
+          sorted[j].latitude!,
+          sorted[j].longitude!,
+        );
+        if (dist < minDist) {
+          minDist = dist;
+          minIdx = j;
+        }
+      }
+      [sorted[i + 1], sorted[minIdx]] = [sorted[minIdx], sorted[i + 1]];
+    }
+    setTrips(sorted);
+    setOrderChanged(true);
+  };
+
+  const groups: Record<string, Trip[]> = {};
   for (const trip of trips) {
-    const location = getSpotLocation(trip);
-    if (!grouped[location]) grouped[location] = [];
-    grouped[location].push(trip);
+    const key = getLocationKey(trip);
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(trip);
   }
 
-  const handleGetTip = async (
-    spotId: string,
-    spotName: string,
-    location: string,
-  ) => {
-    if (tips[spotId] || loadingTips[spotId]) return;
-    setLoadingTips((prev) => ({ ...prev, [spotId]: true }));
-    const tip = await fetchSpotTip(spotName, location);
-    setTips((prev) => ({ ...prev, [spotId]: tip }));
-    setLoadingTips((prev) => ({ ...prev, [spotId]: false }));
-  };
+  if (loading)
+    return (
+      <div className="s-app">
+        <div className="s-content">Loading...</div>
+      </div>
+    );
+  if (error)
+    return (
+      <div className="s-app">
+        <div className="s-content">{error}</div>
+      </div>
+    );
+  if (trips.length === 0)
+    return (
+      <div className="s-app">
+        <div className="s-content">
+          <p>No saved spots yet. Go to Home to save.</p>
+        </div>
+      </div>
+    );
 
   return (
     <div className="s-app">
@@ -170,9 +143,7 @@ export default function MyTripPage() {
       <div className="s-content">
         <div className="s-hero">
           <h1>My Trip</h1>
-          <span className="s-count-badge">
-            ✈️ Your spots, organised by city
-          </span>
+          <span className="s-count-badge">✈️ Smart planner</span>
         </div>
 
         <div
@@ -182,7 +153,6 @@ export default function MyTripPage() {
             borderRadius: "16px",
             padding: "0.75rem",
             marginBottom: "1rem",
-            fontSize: "13px",
           }}
         >
           <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
@@ -191,38 +161,39 @@ export default function MyTripPage() {
               Solo traveller safety
             </span>
           </div>
-          <p
-            style={{ fontSize: "12px", marginTop: "0.25rem", color: "#3d2c27" }}
-          >
+          <p style={{ fontSize: "12px" }}>
             Share live location, keep digital passport copy, avoid empty train
             cars late at night.
           </p>
         </div>
 
-        {loading && (
-          <div className="s-empty">
-            <p>Loading your spots...</p>
-          </div>
-        )}
-        {error && (
-          <div className="s-empty">
-            <p>{error}</p>
-          </div>
-        )}
-        {!loading && !error && trips.length === 0 && (
-          <div className="s-empty">
-            <span className="s-empty-icon">🗺️</span>
-            <h2>No saved spots yet</h2>
-            <p>
-              Go to Home and save Instagram links – we’ll group them by city.
+        <div style={{ marginBottom: "1rem" }}>
+          <button
+            onClick={reorderByProximity}
+            className="s-maps-btn"
+            style={{
+              background: "#ff5a26",
+              color: "white",
+              width: "100%",
+              padding: "0.5rem",
+            }}
+          >
+            🔄 Reorder by proximity (walking distance)
+          </button>
+          {orderChanged && (
+            <p
+              style={{
+                fontSize: "0.7rem",
+                marginTop: "0.25rem",
+                textAlign: "center",
+              }}
+            >
+              Order updated based on straight‑line distance.
             </p>
-            <a href="/" className="s-empty-link">
-              Save your first spot
-            </a>
-          </div>
-        )}
+          )}
+        </div>
 
-        {Object.entries(grouped).map(([location, locationSpots]) => (
+        {Object.entries(groups).map(([location, locationSpots]) => (
           <div
             key={location}
             className="s-card"
@@ -241,96 +212,45 @@ export default function MyTripPage() {
               📍 {location} ({locationSpots.length})
             </div>
             <div style={{ padding: "1rem" }}>
-              {locationSpots.map((spot) => {
-                const { icon, timeHint } = getSpotMetadata(spot.name);
-                const tip = tips[spot.id];
-                const isLoadingTip = loadingTips[spot.id];
+              {locationSpots.map((spot, idx) => {
+                const distanceToNext =
+                  idx < locationSpots.length - 1 &&
+                  spot.latitude &&
+                  spot.longitude &&
+                  locationSpots[idx + 1].latitude &&
+                  locationSpots[idx + 1].longitude
+                    ? formatDistance(
+                        getDistance(
+                          spot.latitude,
+                          spot.longitude,
+                          locationSpots[idx + 1].latitude!,
+                          locationSpots[idx + 1].longitude!,
+                        ),
+                      )
+                    : null;
                 return (
                   <div
                     key={spot.id}
                     style={{
                       padding: "0.75rem 0",
-                      borderBottom: "1px solid #e3e2e0",
+                      borderBottom:
+                        idx < locationSpots.length - 1
+                          ? "1px solid #e3e2e0"
+                          : "none",
                     }}
                   >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                      }}
-                    >
-                      <div style={{ fontWeight: 600, fontSize: "1rem" }}>
-                        <span style={{ marginRight: "0.5rem" }}>{icon}</span>
-                        {spot.name || "Unnamed spot"}
-                      </div>
-                      <button
-                        onClick={() =>
-                          handleGetTip(
-                            spot.id,
-                            spot.name || "this spot",
-                            location,
-                          )
-                        }
-                        disabled={isLoadingTip || !!tip}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          fontSize: "1.2rem",
-                          color: "#ff5a26",
-                        }}
-                        title="Get a friendly tip"
-                      >
-                        {isLoadingTip ? "⏳" : tip ? "✅" : "✨"}
-                      </button>
+                    <div style={{ fontWeight: 600 }}>
+                      {spot.name || "Unnamed spot"}
                     </div>
-                    <div
-                      style={{
-                        fontSize: "0.8rem",
-                        color: "#8f7067",
-                        marginTop: "0.25rem",
-                        display: "flex",
-                        gap: "1rem",
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <span>{timeHint}</span>
-                      <a
-                        href={spot.instagram_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          color: "#ff5a26",
-                          textDecoration: "underline",
-                        }}
-                      >
-                        📸 Instagram
-                      </a>
-                      <a
-                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((spot.name || "") + (location !== "Other" ? `, ${location}` : ""))}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          color: "#ff5a26",
-                          textDecoration: "underline",
-                        }}
-                      >
-                        🗺️ Map
-                      </a>
-                    </div>
-                    {tip && (
+                    {distanceToNext && (
                       <div
                         style={{
-                          marginTop: "0.5rem",
-                          padding: "0.5rem",
-                          background: "#f0eeec",
-                          borderRadius: "12px",
-                          fontSize: "0.85rem",
-                          color: "#3d2c27",
+                          fontSize: "0.7rem",
+                          color: "#8f7067",
+                          marginTop: "0.25rem",
                         }}
                       >
-                        💡 {tip}
+                        🚶‍♂️ Next: {distanceToNext}
                       </div>
                     )}
                   </div>

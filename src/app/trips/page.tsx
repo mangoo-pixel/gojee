@@ -17,51 +17,159 @@ type Trip = {
   longitude?: number | null;
 };
 
-// Clean name: remove anything after the first comma
 function cleanName(fullName: string | null): string {
   if (!fullName) return "Unnamed spot";
-  const idx = fullName.indexOf(',');
+  const idx = fullName.indexOf(",");
   return idx !== -1 ? fullName.substring(0, idx).trim() : fullName.trim();
 }
 
-// Country code mapping (keep your existing full map)
+function getDisplayLocation(trip: Trip): string {
+  const parts = [];
+  if (trip.city?.trim()) parts.push(trip.city);
+  if (trip.country?.trim()) parts.push(trip.country);
+  return parts.join(", ");
+}
+
 const countryCodeMap: Record<string, string> = {
-  // ... (paste your full map here — I'll omit for brevity but you must keep it)
+  japan: "JP",
+  "united states": "US",
+  usa: "US",
+  "united kingdom": "GB",
+  uk: "GB",
+  canada: "CA",
+  australia: "AU",
+  france: "FR",
+  italy: "IT",
+  spain: "ES",
+  germany: "DE",
+  brazil: "BR",
+  mexico: "MX",
+  india: "IN",
+  china: "CN",
+  russia: "RU",
+  "south korea": "KR",
+  korea: "KR",
+  netherlands: "NL",
+  sweden: "SE",
+  norway: "NO",
+  denmark: "DK",
+  finland: "FI",
+  portugal: "PT",
+  greece: "GR",
+  turkey: "TR",
+  thailand: "TH",
+  vietnam: "VN",
+  indonesia: "ID",
+  malaysia: "MY",
+  singapore: "SG",
+  philippines: "PH",
+  "south africa": "ZA",
+  egypt: "EG",
+  morocco: "MA",
+  kenya: "KE",
+  argentina: "AR",
+  chile: "CL",
+  colombia: "CO",
+  peru: "PE",
+  "new zealand": "NZ",
+  ireland: "IE",
+  belgium: "BE",
+  austria: "AT",
+  switzerland: "CH",
+  poland: "PL",
+  "czech republic": "CZ",
+  hungary: "HU",
+  romania: "RO",
+  ukraine: "UA",
+  israel: "IL",
+  uae: "AE",
+  "saudi arabia": "SA",
+  qatar: "QA",
+  pakistan: "PK",
+  bangladesh: "BD",
+  "sri lanka": "LK",
+  nepal: "NP",
+  iceland: "IS",
+  croatia: "HR",
+  serbia: "RS",
+  bulgaria: "BG",
+  slovenia: "SI",
+  slovakia: "SK",
+  estonia: "EE",
+  latvia: "LV",
+  lithuania: "LT",
+  georgia: "GE",
+  armenia: "AM",
+  azerbaijan: "AZ",
+  kazakhstan: "KZ",
+  uzbekistan: "UZ",
+  mongolia: "MN",
+  cambodia: "KH",
+  laos: "LA",
+  myanmar: "MM",
+  brunei: "BN",
+  fiji: "FJ",
+  maldives: "MV",
+  bahamas: "BS",
+  jamaica: "JM",
+  cuba: "CU",
+  "dominican republic": "DO",
+  "costa rica": "CR",
+  panama: "PA",
+  ecuador: "EC",
+  bolivia: "BO",
+  paraguay: "PY",
+  uruguay: "UY",
+  venezuela: "VE",
+  guyana: "GY",
+  suriname: "SR",
+  algeria: "DZ",
+  tunisia: "TN",
+  libya: "LY",
+  sudan: "SD",
+  ethiopia: "ET",
+  somalia: "SO",
+  uganda: "UG",
+  rwanda: "RW",
+  tanzania: "TZ",
+  mozambique: "MZ",
+  madagascar: "MG",
+  angola: "AO",
+  ghana: "GH",
+  nigeria: "NG",
+  senegal: "SN",
+  cameroon: "CM",
+  zimbabwe: "ZW",
+  zambia: "ZM",
+  malawi: "MW",
+  botswana: "BW",
+  namibia: "NA",
+  eswatini: "SZ",
+  lesotho: "LS",
+  taiwan: "TW",
 };
 
 function getCountryCode(country: string | null): string | null {
   if (!country) return null;
   const lower = country.toLowerCase().trim();
-  if (countryCodeMap[lower]) return countryCodeMap[lower];
-  for (const [key, code] of Object.entries(countryCodeMap)) {
-    if (lower.includes(key)) return code;
-  }
-  return null;
+  return countryCodeMap[lower] || null;
 }
 
-function getDisplayCity(trip: Trip): string | null {
-  if (trip.city?.trim()) return trip.city.trim();
-  // Fallback: extract from cleaned name? Better to rely on SQL update, but as safeguard:
-  const name = cleanName(trip.name).toLowerCase();
-  if (name.includes("tokyo")) return "Tokyo";
-  if (name.includes("kyoto")) return "Kyoto";
-  if (name.includes("osaka")) return "Osaka";
-  return null;
+function formatDate(dateString: string | null): string {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  return date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  });
 }
 
-function shortenUrl(url: string): string {
-  try {
-    const u = new URL(url);
-    if (u.hostname.includes("instagram.com")) {
-      const path = u.pathname;
-      if (path.includes("/p/")) return "📸 Instagram post";
-      if (path.includes("/reel/")) return "📽️ Instagram Reel";
-      return "📷 Instagram";
-    }
-    return url.length > 40 ? url.substring(0, 40) + "…" : url;
-  } catch {
-    return url;
-  }
+function getMapsLink(trip: Trip): string {
+  const query = encodeURIComponent(
+    cleanName(trip.name) + (trip.country ? `, ${trip.country}` : ""),
+  );
+  return `https://www.google.com/maps/search/?api=1&query=${query}`;
 }
 
 export default function SavedSpotsPage() {
@@ -79,7 +187,9 @@ export default function SavedSpotsPage() {
     const abortController = new AbortController();
     const fetchTrips = async () => {
       try {
-        const res = await fetch("/api/recent-trips?limit=100", { signal: abortController.signal });
+        const res = await fetch("/api/recent-trips?limit=100", {
+          signal: abortController.signal,
+        });
         if (res.status === 401) {
           setError("Please log in to view your saved spots.");
           setLoading(false);
@@ -109,10 +219,9 @@ export default function SavedSpotsPage() {
         trips.filter(
           (trip) =>
             (trip.name && trip.name.toLowerCase().includes(query)) ||
-            (trip.instagram_url && trip.instagram_url.toLowerCase().includes(query)) ||
-            (trip.country && trip.country.toLowerCase().includes(query)) ||
-            (trip.city && trip.city.toLowerCase().includes(query))
-        )
+            (trip.city && trip.city.toLowerCase().includes(query)) ||
+            (trip.country && trip.country.toLowerCase().includes(query)),
+        ),
       );
     }
   }, [searchQuery, trips]);
@@ -147,115 +256,198 @@ export default function SavedSpotsPage() {
     } else {
       document.body.style.overflow = "";
     }
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [deleteId]);
-
-  const getMapsLink = (trip: Trip) => {
-    const query = encodeURIComponent(cleanName(trip.name) + (trip.country ? `, ${trip.country}` : ""));
-    return `https://www.google.com/maps/search/?api=1&query=${query}`;
-  };
-
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return "";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
-  };
 
   return (
     <div className="s-app">
-      {/* topbar unchanged */}
-      <div className="s-topbar">...</div>
+      <div className="s-topbar">
+        <div className="s-topbar-left">
+          <div className="s-avatar">
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: 22, color: "#ff5a26" }}
+            >
+              explore
+            </span>
+          </div>
+          <span className="s-brand">Gojee</span>
+        </div>
+        <div className="s-topbar-right">
+          <button className="s-icon-btn" aria-label="Notifications">
+            <span className="material-symbols-outlined">notifications</span>
+          </button>
+          <button className="s-icon-btn" aria-label="Settings">
+            <span className="material-symbols-outlined">settings</span>
+          </button>
+        </div>
+      </div>
 
       <div className="s-content">
         <div className="s-hero">
           <h1>Saved Spots</h1>
-          <span className="s-count-badge">{filteredTrips.length} saved</span>
+          <span className="s-count-badge">
+            {filteredTrips.length} {filteredTrips.length === 1 ? "gem" : "gems"}{" "}
+            saved
+          </span>
         </div>
 
         <div className="s-search">
-          <span className="s-search-icon material-symbols-outlined">search</span>
+          <span className="s-search-icon material-symbols-outlined">
+            search
+          </span>
           <input
             type="text"
-            placeholder="Search name, city, country..."
+            placeholder="Search name, city, or country..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
 
-        {loading && <div className="s-empty"><p>Loading...</p></div>}
-        {error && <div className="s-empty"><p>{error}</p></div>}
-        {!loading && !error && filteredTrips.length === 0 && <div className="s-empty"><p>No spots saved yet.</p></div>}
+        {loading && (
+          <div className="s-empty">
+            <p>Loading your spots...</p>
+          </div>
+        )}
+        {error && (
+          <div className="s-empty">
+            <span className="s-empty-icon">error</span>
+            <h2>Something went wrong</h2>
+            <p>{error}</p>
+            {error.includes("log in") ? (
+              <a href="/login" className="s-empty-link">
+                Log in
+              </a>
+            ) : (
+              <button
+                onClick={() => window.location.reload()}
+                className="s-empty-link"
+              >
+                Try again
+              </button>
+            )}
+          </div>
+        )}
+        {!loading && !error && filteredTrips.length === 0 && (
+          <div className="s-empty">
+            <span className="s-empty-icon">explore_off</span>
+            <h2>No spots saved yet</h2>
+            <a href="/" className="s-empty-link">
+              Save your first spot
+            </a>
+          </div>
+        )}
 
         {!loading && !error && filteredTrips.length > 0 && (
-          <div className="cards-list" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
+          >
             {filteredTrips.map((trip) => {
+              const location = getDisplayLocation(trip);
+              const displayName = cleanName(trip.name);
               const countryCode = getCountryCode(trip.country);
-              const displayCity = getDisplayCity(trip);
-              const name = cleanName(trip.name);
               return (
-                <div key={trip.id} className="s-card" style={{ padding: "1rem", borderRadius: "20px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.75rem" }}>
-                    <div>
-                      <div style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "0.25rem", color: "#1a1c1b" }}>
-                        {name}
-                      </div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center" }}>
-                        {displayCity && (
-                          <span style={{
-                            background: "#f0eeec",
-                            padding: "0.2rem 0.6rem",
-                            borderRadius: "30px",
-                            fontSize: "0.75rem",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "0.2rem"
-                          }}>
-                            <span className="material-symbols-outlined" style={{ fontSize: "0.9rem" }}>location_on</span>
-                            {displayCity}
+                <div
+                  key={trip.id}
+                  className="s-card"
+                  style={{ padding: "0.75rem 1rem", borderRadius: "16px" }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      flexWrap: "wrap",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, marginBottom: "0.2rem" }}>
+                        {displayName}
+                        {location && (
+                          <span
+                            style={{
+                              fontSize: "0.85rem",
+                              fontWeight: "normal",
+                              color: "#5b4039",
+                              marginLeft: "0.5rem",
+                            }}
+                          >
+                            – {location}
                           </span>
                         )}
                         {countryCode && (
                           <ReactCountryFlag
                             countryCode={countryCode}
                             svg
-                            style={{ width: "1.4em", height: "1.4em", borderRadius: "2px" }}
+                            style={{
+                              width: "1.2em",
+                              height: "1.2em",
+                              marginLeft: "0.5rem",
+                              verticalAlign: "middle",
+                            }}
                             title={trip.country || ""}
                           />
                         )}
-                        <span style={{ fontSize: "0.7rem", color: "#8f7067" }}>
-                          📅 {formatDate(trip.created_at)}
-                        </span>
+                      </div>
+                      <div style={{ fontSize: "0.7rem", color: "#8f7067" }}>
+                        Saved {formatDate(trip.created_at)}
                       </div>
                     </div>
-                    <button
-                      onClick={() => setDeleteId(trip.id)}
-                      className="s-delete-btn"
-                      style={{ background: "none", border: "none", cursor: "pointer", color: "#8f7067", padding: "0.25rem" }}
-                      disabled={isDeleting}
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "0.5rem",
+                        alignItems: "center",
+                      }}
                     >
-                      <span className="material-symbols-outlined">delete</span>
-                    </button>
-                  </div>
-
-                  <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem" }}>
-                    <a
-                      href={getMapsLink(trip)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="s-maps-btn"
-                      style={{ flex: 1, textAlign: "center", background: "#f0eeec", color: "#1a1c1b", padding: "0.5rem", borderRadius: "40px", fontSize: "0.8rem", textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.25rem" }}
-                    >
-                      <span className="material-symbols-outlined" style={{ fontSize: "1rem" }}>map</span> Maps
-                    </a>
-                    <a
-                      href={trip.instagram_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="s-maps-btn"
-                      style={{ flex: 1, textAlign: "center", background: "#ffb38e", color: "#3d2c27", padding: "0.5rem", borderRadius: "40px", fontSize: "0.8rem", textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.25rem" }}
-                    >
-                      <span className="material-symbols-outlined" style={{ fontSize: "1rem" }}>photo_camera</span> Instagram
-                    </a>
+                      <a
+                        href={getMapsLink(trip)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="s-maps-btn"
+                        style={{
+                          padding: "0.25rem 0.75rem",
+                          fontSize: "0.75rem",
+                          background: "#f0eeec",
+                          color: "#1a1c1b",
+                        }}
+                      >
+                        Maps
+                      </a>
+                      <a
+                        href={trip.instagram_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="s-maps-btn"
+                        style={{
+                          padding: "0.25rem 0.75rem",
+                          fontSize: "0.75rem",
+                          background: "#ffb38e",
+                          color: "#3d2c27",
+                        }}
+                      >
+                        IG
+                      </a>
+                      <button
+                        onClick={() => setDeleteId(trip.id)}
+                        className="s-delete-btn"
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          color: "#8f7067",
+                          padding: "0.25rem",
+                        }}
+                        disabled={isDeleting}
+                      >
+                        <span className="material-symbols-outlined">
+                          delete
+                        </span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
@@ -264,11 +456,68 @@ export default function SavedSpotsPage() {
         )}
       </div>
 
-      {/* Delete modal unchanged */}
-      {deleteId && ( ... )}
+      {deleteId && (
+        <div
+          className="s-modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-title"
+        >
+          <div className="s-modal">
+            <h3 id="modal-title">Remove this spot?</h3>
+            <p>You can always add it again later.</p>
+            <div className="s-modal-actions">
+              <button
+                ref={cancelButtonRef}
+                className="s-btn-secondary"
+                onClick={() => setDeleteId(null)}
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                className="s-btn-danger"
+                onClick={handleDeleteConfirmed}
+                disabled={isDeleting}
+              >
+                {isDeleting ? "Removing..." : "Remove"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-      {/* Bottom nav unchanged */}
-      <nav className="s-nav">...</nav>
+      <nav className="s-nav">
+        <a
+          href="/home"
+          className={`s-nav-item ${pathname === "/home" ? "active" : ""}`}
+        >
+          <span className="s-nav-icon">🏠</span>
+          <span>Home</span>
+        </a>
+        <a
+          href="/trips"
+          className={`s-nav-item ${pathname === "/trips" ? "active" : ""}`}
+        >
+          <span className="s-nav-icon">🔖</span>
+          <span>Saved</span>
+        </a>
+        <a
+          href="/my-trip"
+          className={`s-nav-item ${pathname === "/my-trip" ? "active" : ""}`}
+        >
+          <span className="s-nav-icon">✈️</span>
+          <span>My Trip</span>
+        </a>
+        <a href="/safe-help" className="s-nav-item">
+          <span className="s-nav-icon">🛡️</span>
+          <span>Safety</span>
+        </a>
+        <a href="/profile" className="s-nav-item">
+          <span className="s-nav-icon">👤</span>
+          <span>Profile</span>
+        </a>
+      </nav>
     </div>
   );
 }

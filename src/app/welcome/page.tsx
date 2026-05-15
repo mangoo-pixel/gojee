@@ -11,28 +11,20 @@ export default function WelcomePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        router.push("/home");
-      } else {
-        setLoading(false);
-      }
-    });
+    createClient()
+      .auth.getSession()
+      .then(({ data: { session } }) => {
+        if (session) router.push("/home");
+        else setLoading(false);
+      });
   }, [router]);
 
-  if (loading) {
+  if (loading)
     return (
       <div className="s-app">
-        <div
-          className="s-content"
-          style={{ textAlign: "center", paddingTop: "4rem" }}
-        >
-          <p>Loading...</p>
-        </div>
+        <div className="s-content">Loading...</div>
       </div>
     );
-  }
 
   return (
     <div className="s-app">
@@ -53,171 +45,96 @@ export default function WelcomePage() {
 
       <div
         className="s-content"
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          paddingTop: "1rem",
-        }}
+        style={{ maxWidth: "600px", margin: "0 auto", paddingTop: "2rem" }}
       >
-        {/* Hero Illustration */}
-        <div
-          style={{
-            width: "100%",
-            maxWidth: "280px",
-            margin: "0 auto 1.5rem auto",
-          }}
-        >
-          <div
-            style={{ position: "relative", width: "100%", aspectRatio: "1/1" }}
-          >
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                background: "#ffb38e20",
-                borderRadius: "50%",
-                filter: "blur(40px)",
-              }}
-            />
-            <img
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuATnBXJCQ1ms1CQVceO8Ugjccc1fmiRXOq1O9TUlG_zFlMsCPCj7BF7aa_M2rNKGFSKjJpRyJWy_v40BWr1NbppxldPafP05SMeIDT6BURgFuBhtgSXsvEKxRlixFpIdvlqluT4fcIPXiZPnzlSqwUyEw6qaqeLIx6AebsoNrPFbo5sHYH02KxXsmEmlMazc2sZwCUdVLMW7CKH9h5Qu7745U6rQD31j46NaiwezmmSfJ0y8m5Fbo5eEH2s_qp1EKASBGMRpJD4zI_D"
-              alt="Compass and map illustration"
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "contain",
-                position: "relative",
-                zIndex: 2,
-              }}
-            />
-          </div>
-        </div>
-
-        <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
-          <h2
+        <div style={{ textAlign: "center" }}>
+          <h1
             style={{
-              fontSize: "1.75rem",
+              fontSize: "2.5rem",
               fontWeight: 800,
-              lineHeight: 1.2,
               marginBottom: "0.5rem",
-              color: "#1a1c1b",
             }}
           >
             Travel made simple, anywhere.
-          </h2>
-          <p style={{ fontSize: "1rem", color: "#8f7067" }}>
+          </h1>
+          <p
+            style={{
+              fontSize: "1.2rem",
+              color: "#8f7067",
+              marginBottom: "2rem",
+            }}
+          >
             Save spots from Instagram. Plan your trip. Travel safely.
           </p>
-        </div>
 
-        <div style={{ width: "100%", marginBottom: "2rem" }}>
-          {/* Feature Cards - unchanged */}
           <div
-            className="s-card"
             style={{
               display: "flex",
-              alignItems: "center",
+              flexDirection: "column",
               gap: "1rem",
-              padding: "0.75rem 1rem",
-              marginBottom: "0.75rem",
+              marginBottom: "2rem",
             }}
           >
             <div
               style={{
-                width: "44px",
-                height: "44px",
-                borderRadius: "50%",
-                background: "#ffb38e20",
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
+                gap: "1rem",
+                background: "#f0eeec",
+                padding: "0.75rem 1rem",
+                borderRadius: "60px",
               }}
             >
               <span
                 className="material-symbols-outlined"
                 style={{ color: "#ff5a26" }}
               >
-                location_on
+                photo_camera
+              </span>
+              <span>
+                1. Save Instagram links → spot name & city are auto‑filled
               </span>
             </div>
-            <span
-              style={{ fontWeight: 600, fontSize: "1rem", color: "#1a1c1b" }}
-            >
-              Save any spot
-            </span>
-          </div>
-          <div
-            className="s-card"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "1rem",
-              padding: "0.75rem 1rem",
-              marginBottom: "0.75rem",
-            }}
-          >
             <div
               style={{
-                width: "44px",
-                height: "44px",
-                borderRadius: "50%",
-                background: "#ffb38e20",
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
+                gap: "1rem",
+                background: "#f0eeec",
+                padding: "0.75rem 1rem",
+                borderRadius: "60px",
               }}
             >
               <span
                 className="material-symbols-outlined"
                 style={{ color: "#ff5a26" }}
               >
-                map
+                group_work
               </span>
+              <span>2. Spots are grouped by city – plan day by day</span>
             </div>
-            <span
-              style={{ fontWeight: 600, fontSize: "1rem", color: "#1a1c1b" }}
-            >
-              Plan your route
-            </span>
-          </div>
-          <div
-            className="s-card"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "1rem",
-              padding: "0.75rem 1rem",
-            }}
-          >
             <div
               style={{
-                width: "44px",
-                height: "44px",
-                borderRadius: "50%",
-                background: "#ffb38e20",
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
+                gap: "1rem",
+                background: "#f0eeec",
+                padding: "0.75rem 1rem",
+                borderRadius: "60px",
               }}
             >
               <span
                 className="material-symbols-outlined"
                 style={{ color: "#ff5a26" }}
               >
-                shield_with_heart
+                directions_walk
+              </span>
+              <span>
+                3. See walking distances and reorder spots for the best route
               </span>
             </div>
-            <span
-              style={{ fontWeight: 600, fontSize: "1rem", color: "#1a1c1b" }}
-            >
-              Stay safe
-            </span>
           </div>
-        </div>
 
-        {/* Single button: Get Started */}
-        <div style={{ width: "100%", marginBottom: "2rem" }}>
           <button
             onClick={() => router.push("/login")}
             className="s-maps-btn"
@@ -226,12 +143,7 @@ export default function WelcomePage() {
               color: "white",
               padding: "1rem",
               fontSize: "1rem",
-              border: "none",
-              borderRadius: "40px",
-              fontWeight: "bold",
-              cursor: "pointer",
               width: "100%",
-              boxShadow: "0 4px 12px rgba(255,90,38,0.3)",
             }}
           >
             Get Started
