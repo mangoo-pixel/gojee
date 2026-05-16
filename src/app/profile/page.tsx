@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { logout } from "@/app/actions/auth";
 import "@/app/trips/trips2.css";
 
 export default function ProfilePage() {
@@ -10,6 +9,12 @@ export default function ProfilePage() {
   const [spotCount, setSpotCount] = useState(0);
   const [tripsPlanned, setTripsPlanned] = useState(0);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const savedAvatar = localStorage.getItem("gojee_avatar");
+    if (savedAvatar) setAvatarUrl(savedAvatar);
+  }, []);
 
   useEffect(() => {
     const fetchCount = async () => {
@@ -29,14 +34,33 @@ export default function ProfilePage() {
     fetchCount();
   }, []);
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     if (confirm("Are you sure you want to log out?")) {
-      await logout();
+      alert("Logged out (mock). Auth will be added later.");
+      window.location.href = "/";
     }
   };
 
   const showComingSoon = (feature: string) => {
     alert(`${feature} – coming soon!`);
+  };
+
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const dataUrl = reader.result as string;
+        setAvatarUrl(dataUrl);
+        localStorage.setItem("gojee_avatar", dataUrl);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeAvatar = () => {
+    setAvatarUrl(null);
+    localStorage.removeItem("gojee_avatar");
   };
 
   return (
@@ -88,30 +112,29 @@ export default function ProfilePage() {
               style={{
                 width: "100px",
                 height: "100px",
-                borderRadius: "28px",
+                borderRadius: "50%",
                 overflow: "hidden",
-                transform: "rotate(3deg)",
                 margin: "0 auto",
-                boxShadow: "0 12px 24px rgba(0,0,0,0.1)",
+                background: "#f0eeec",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
-              <div
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  background: "linear-gradient(135deg, #ffb38e, #ff8e6e)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt="Avatar"
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              ) : (
                 <span
                   className="material-symbols-outlined"
-                  style={{ fontSize: 56, color: "white" }}
+                  style={{ fontSize: 56, color: "#8f7067" }}
                 >
                   person
                 </span>
-              </div>
+              )}
             </div>
             <div
               style={{
@@ -120,7 +143,7 @@ export default function ProfilePage() {
                 right: "-8px",
                 background: "white",
                 borderRadius: "40px",
-                padding: "4px 12px",
+                padding: "4px 8px",
                 boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
                 fontSize: "11px",
                 fontWeight: "bold",
@@ -140,11 +163,55 @@ export default function ProfilePage() {
           >
             Sarah Jenkins
           </h2>
-          <p style={{ color: "#8f7067", marginBottom: "0.5rem" }}>
+          <p style={{ color: "#8f7067", marginBottom: "0.75rem" }}>
             sarah.j@traveler.com
           </p>
+          <div
+            style={{
+              display: "flex",
+              gap: "0.5rem",
+              justifyContent: "center",
+              marginTop: "0.5rem",
+            }}
+          >
+            <label
+              htmlFor="avatar-upload"
+              className="s-maps-btn"
+              style={{
+                background: "#ff5a26",
+                color: "white",
+                padding: "0.25rem 1rem",
+                fontSize: "0.8rem",
+                cursor: "pointer",
+              }}
+            >
+              Upload photo
+            </label>
+            <input
+              id="avatar-upload"
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={handleAvatarUpload}
+            />
+            {avatarUrl && (
+              <button
+                onClick={removeAvatar}
+                className="s-maps-btn"
+                style={{
+                  background: "#e3e2e0",
+                  color: "#ff5a26",
+                  padding: "0.25rem 1rem",
+                  fontSize: "0.8rem",
+                }}
+              >
+                Remove
+              </button>
+            )}
+          </div>
         </div>
 
+        {/* Stats Grid */}
         <div
           style={{
             display: "grid",
@@ -217,6 +284,7 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {/* Settings List (unchanged) */}
         <div
           className="s-card"
           style={{ padding: "1rem 0", marginBottom: "2rem" }}
@@ -524,10 +592,7 @@ export default function ProfilePage() {
           <span className="s-nav-icon">✈️</span>
           <span>My Trip</span>
         </a>
-        <a
-          href="/safe-help"
-          className={`s-nav-item ${pathname === "/safe-help" ? "active" : ""}`}
-        >
+        <a href="/safe-help" className="s-nav-item">
           <span className="s-nav-icon">🛡️</span>
           <span>Safety</span>
         </a>
