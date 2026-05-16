@@ -152,8 +152,27 @@ export default function MyTripPage() {
 
   return (
     <div className="s-app">
-      {/* topbar unchanged */}
-      <div className="s-topbar">...</div>
+      <div className="s-topbar">
+        <div className="s-topbar-left">
+          <div className="s-avatar">
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: 22, color: "#ff5a26" }}
+            >
+              explore
+            </span>
+          </div>
+          <span className="s-brand">Gojee</span>
+        </div>
+        <div className="s-topbar-right">
+          <button className="s-icon-btn" aria-label="Notifications">
+            <span className="material-symbols-outlined">notifications</span>
+          </button>
+          <button className="s-icon-btn" aria-label="Settings">
+            <span className="material-symbols-outlined">settings</span>
+          </button>
+        </div>
+      </div>
 
       <div className="s-content">
         <div className="s-hero">
@@ -182,7 +201,6 @@ export default function MyTripPage() {
           </p>
         </div>
 
-        {/* Summary card */}
         <div
           className="s-card"
           style={{
@@ -210,7 +228,6 @@ export default function MyTripPage() {
           </div>
         </div>
 
-        {/* AI Generate button and copy */}
         <div
           style={{
             display: "flex",
@@ -247,7 +264,6 @@ export default function MyTripPage() {
           )}
         </div>
 
-        {/* AI Plan display */}
         {aiPlan && (
           <div
             className="s-card"
@@ -307,7 +323,6 @@ export default function MyTripPage() {
           </div>
         )}
 
-        {/* Deterministic grouping with distances */}
         {Object.entries(groups).map(([location, locationSpots]) => (
           <div
             key={location}
@@ -377,7 +392,37 @@ export default function MyTripPage() {
         <div style={{ height: "5rem" }} />
       </div>
 
-      <nav className="s-nav">...</nav>
+      <nav className="s-nav">
+        <a
+          href="/home"
+          className={`s-nav-item ${pathname === "/home" ? "active" : ""}`}
+        >
+          <span className="s-nav-icon">🏠</span>
+          <span>Home</span>
+        </a>
+        <a
+          href="/trips"
+          className={`s-nav-item ${pathname === "/trips" ? "active" : ""}`}
+        >
+          <span className="s-nav-icon">🔖</span>
+          <span>Saved</span>
+        </a>
+        <a
+          href="/my-trip"
+          className={`s-nav-item ${pathname === "/my-trip" ? "active" : ""}`}
+        >
+          <span className="s-nav-icon">✈️</span>
+          <span>My Trip</span>
+        </a>
+        <a href="/safe-help" className="s-nav-item">
+          <span className="s-nav-icon">🛡️</span>
+          <span>Safety</span>
+        </a>
+        <a href="/profile" className="s-nav-item">
+          <span className="s-nav-icon">👤</span>
+          <span>Profile</span>
+        </a>
+      </nav>
     </div>
   );
 }
